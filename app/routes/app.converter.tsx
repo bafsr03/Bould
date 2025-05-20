@@ -10,10 +10,10 @@ import {
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 
-export default function AdditionalPage() {
+export default function ConverterPage() {
   return (
     <Page>
-      <TitleBar title="Additional page" />
+      <TitleBar title="Bould" />
       <Layout>
         <Layout.Section>
           <Card>

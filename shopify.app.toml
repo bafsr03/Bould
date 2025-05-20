@@ -3,7 +3,7 @@
 client_id = "b6d437a7d969cd77e40e9cb95583c5fd"
 name = "Bould"
 handle = "bould"
-application_url = "https://strand-ok-amy-mechanics.trycloudflare.com"
+application_url = "https://wildlife-purchasing-sg-levitra.trycloudflare.com"
 embedded = true
 
 [build]
@@ -27,9 +27,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://strand-ok-amy-mechanics.trycloudflare.com/auth/callback",
-  "https://strand-ok-amy-mechanics.trycloudflare.com/auth/shopify/callback",
-  "https://strand-ok-amy-mechanics.trycloudflare.com/api/auth/callback"
+  "https://wildlife-purchasing-sg-levitra.trycloudflare.com/auth/callback",
+  "https://wildlife-purchasing-sg-levitra.trycloudflare.com/auth/shopify/callback",
+  "https://wildlife-purchasing-sg-levitra.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]
