@@ -17,9 +17,9 @@ const ProductIndexTable = () => {
 
   const orders = [
     { id: "p1", product: "T-Shirt", type: "Clothing", status: <Badge tone="success">Converted</Badge> },
-    { id: "p2", product: "Sticker", type: "Merch", status: <Badge tone="warning">Not Converted</Badge> },
+    { id: "p2", product: "Sticker", type: "Merch", status: <Badge tone="attention">Not Converted</Badge> },
     { id: "p3", product: "Hoodie", type: "Clothing", status: <Badge tone="success">Converted</Badge> },
-    { id: "p4", product: "Cap", type: "Clothing", status: <Badge tone="warning">Not Converted</Badge> },
+    { id: "p4", product: "Cap", type: "Clothing", status: <Badge tone="attention">Not Converted</Badge> },
     { id: "p5", product: "Shorts", type: "Clothing", status: <Badge progress="incomplete" tone="info">In process</Badge> },
   ];
 
