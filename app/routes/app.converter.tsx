@@ -1,14 +1,20 @@
+// src/pages/ConverterPage.tsx
+import React from "react";
 import {
-  Box,
-  Card,
   Layout,
-  Link,
-  List,
   Page,
   Text,
-  BlockStack,
+  CalloutCard,
+  InlineGrid,
+  Box,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
+
+import DropZoneUploader from "./converterComponents/DropZoneUploader";
+import ProductIndexTable from "./converterComponents/ProductIndexTable";
+import TechnicalPackage from "./converterComponents/TechnicalPackage";
+import Previewer from "./converterComponents/PreviewerPanel";
+import ProductDetails from "./converterComponents/ProductDetails";
 
 export default function ConverterPage() {
   return (
@@ -16,68 +22,47 @@ export default function ConverterPage() {
       <TitleBar title="Bould" />
       <Layout>
         <Layout.Section>
-          <Card>
-            <BlockStack gap="300">
-              <Text as="p" variant="bodyMd">
-                The app template comes with an additional page which
-                demonstrates how to create multiple pages within app navigation
-                using{" "}
-                <Link
-                  url="https://shopify.dev/docs/apps/tools/app-bridge"
-                  target="_blank"
-                  removeUnderline
-                >
-                  App Bridge
-                </Link>
-                .
-              </Text>
-              <Text as="p" variant="bodyMd">
-                To create your own page and have it show up in the app
-                navigation, add a page inside <Code>app/routes</Code>, and a
-                link to it in the <Code>&lt;NavMenu&gt;</Code> component found
-                in <Code>app/routes/app.jsx</Code>.
-              </Text>
-            </BlockStack>
-          </Card>
+          <Text variant="headingXl" as="h1">
+            Converter
+          </Text>
+
+          <CalloutCard
+            title="Watch the Steps to Convert any 2D image"
+            illustration="https://cdn.shopify.com/s/assets/admin/checkout/settings-customizecart-705f57c725ac05be5a34ec20c05b94298cb8afd10aac7bd9c7ad02030f48cfa0.svg"
+            primaryAction={{ content: "Upload" }}
+            secondaryAction={{ content: "Watch Tutorial" }}
+          >
+            <p>
+              To upload your Garment to the Converter, drag and drop your Design in the drop zone, or click on upload.
+            </p>
+          </CalloutCard>
+
+          <Box paddingBlockStart="400">
+            <InlineGrid
+              columns={{
+                xs: "1fr",
+                sm: ["twoThirds", "oneThird"],
+              }}
+              gap="400"
+            >
+              <DropZoneUploader />
+              <ProductIndexTable />
+            </InlineGrid>
+          </Box>
         </Layout.Section>
-        <Layout.Section variant="oneThird">
-          <Card>
-            <BlockStack gap="200">
-              <Text as="h2" variant="headingMd">
-                Resources
-              </Text>
-              <List>
-                <List.Item>
-                  <Link
-                    url="https://shopify.dev/docs/apps/design-guidelines/navigation#app-nav"
-                    target="_blank"
-                    removeUnderline
-                  >
-                    App nav best practices
-                  </Link>
-                </List.Item>
-              </List>
-            </BlockStack>
-          </Card>
+
+        <Layout.Section>
+          <InlineGrid columns={{ xs: "1fr", sm: ["oneThird", "twoThirds"] }} gap="400">
+            <ProductDetails />
+            <Previewer />
+          </InlineGrid>
+        </Layout.Section>
+
+        <Layout.Section>
+           <TechnicalPackage />
+          
         </Layout.Section>
       </Layout>
     </Page>
-  );
-}
-
-function Code({ children }: { children: React.ReactNode }) {
-  return (
-    <Box
-      as="span"
-      padding="025"
-      paddingInlineStart="100"
-      paddingInlineEnd="100"
-      background="bg-surface-active"
-      borderWidth="025"
-      borderColor="border"
-      borderRadius="100"
-    >
-      <code>{children}</code>
-    </Box>
   );
 }
