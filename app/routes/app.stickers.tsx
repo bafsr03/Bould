@@ -1,83 +1,125 @@
+// app/routes/stickerspage.tsx
+import { useState, useCallback } from 'react';
 import {
-  Box,
-  Card,
-  Layout,
-  Link,
-  List,
   Page,
+  Layout,
   Text,
   BlockStack,
-} from "@shopify/polaris";
-import { TitleBar } from "@shopify/app-bridge-react";
+  Box,
+} from '@shopify/polaris';
+import { TitleBar } from '@shopify/app-bridge-react';
+
+// Import your modular components
+import { InitialStickerGeneration } from './stickerComponents/InitialStickerGeneration';
+import { GenerationControls }           from './stickerComponents/GenerationControls';
+import { ImagePreview }                 from './stickerComponents/ImagePreview';
+import { StickerSettings }              from './stickerComponents/StickerSettings';
+
+// A default product photo if none has been selected yet
+const DEFAULT_PRODUCT_IMAGE =
+  'https://burst.shopifycdn.com/phot...c.jpg?width=373&format=pjpg&exif=0&iptc=0';
+
 
 export default function StickersPage() {
-  return (
-    <Page>
-      <TitleBar title="Bould" />
-      <Layout>
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="300">
-              <Text as="p" variant="bodyMd">
-                The app template comes with an additional page which
-                demonstrates how to create multiple pages within app navigation
-                using{" "}
-                <Link
-                  url="https://shopify.dev/docs/apps/tools/app-bridge"
-                  target="_blank"
-                  removeUnderline
-                >
-                  App Bridge
-                </Link>
-                .
-              </Text>
-              <Text as="p" variant="bodyMd">
-                To create your own page and have it show up in the app
-                navigation, add a page inside <Code>app/routes</Code>, and a
-                link to it in the <Code>&lt;NavMenu&gt;</Code> component found
-                in <Code>app/routes/app.jsx</Code>.
-              </Text>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-        <Layout.Section variant="oneThird">
-          <Card>
-            <BlockStack gap="200">
-              <Text as="h2" variant="headingMd">
-                Resources
-              </Text>
-              <List>
-                <List.Item>
-                  <Link
-                    url="https://shopify.dev/docs/apps/design-guidelines/navigation#app-nav"
-                    target="_blank"
-                    removeUnderline
-                  >
-                    App nav best practices
-                  </Link>
-                </List.Item>
-              </List>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-      </Layout>
-    </Page>
-  );
-}
+  const [currentView, setCurrentView]         = useState<'initial' | 'generation'>('initial');
+  const [productImage, setProductImage]       = useState<string | null>(null);
+  const [initialPrompt, setInitialPrompt]     = useState<string>('');
+  const [freeImagesLeft, setFreeImagesLeft]   = useState<number>(4);
 
-function Code({ children }: { children: React.ReactNode }) {
+  // New sticker‐settings state
+  const [imageScale, setImageScale]           = useState<number>(100);
+  const [morphologyPadding, setMorphologyPadding] = useState<number>(0);
+  const [stickerFinish, setStickerFinish]     = useState<string>('Matte');
+  const [stickerOverlay, setStickerOverlay]   = useState<string>('None');
+
+  const handleGoToGenerationView = useCallback(
+    (image: string, prompt: string) => {
+      setProductImage(image);
+      setInitialPrompt(prompt);
+      setCurrentView('generation');
+    },
+    []
+  );
+
+  const handleGoBackToInitialView = useCallback(() => {
+    setCurrentView('initial');
+    // If you want to clear selections on back, uncomment:
+    // setProductImage(null);
+    // setInitialPrompt('');
+  }, []);
+
+  const pageTitle = currentView === 'initial' ? 'Stickers' : 'Stickers';
+
   return (
-    <Box
-      as="span"
-      padding="025"
-      paddingInlineStart="100"
-      paddingInlineEnd="100"
-      background="bg-surface-active"
-      borderWidth="025"
-      borderColor="border"
-      borderRadius="100"
+    <Page
+      title={pageTitle}
+      backAction={
+        currentView === 'generation'
+          ? {
+              content: 'Back to AI Photoshoots',
+              onAction: handleGoBackToInitialView,
+            }
+          : undefined
+      }
+      secondaryActions={
+        currentView === 'generation'
+          ? [{ content: `Free images left ${freeImagesLeft}/4`, disabled: true }]
+          : []
+      }
     >
-      <code>{children}</code>
-    </Box>
+      <TitleBar title="Bould" />
+
+      {currentView === 'initial' ? (
+        <>
+          <BlockStack gap="400">
+            <Text variant="headingXl" as="h1">
+              Bould
+            </Text>
+            <Text variant="bodyLg" as="p" tone="subdued">
+              Create stunning images and marketing content from plain product photos.
+            </Text>
+          </BlockStack>
+
+          <Box paddingBlockStart="800" />
+          <InitialStickerGeneration onGenerate={handleGoToGenerationView} />
+        </>
+      ) : (
+        <Layout>
+          {/* Preview + Sticker Settings */}
+          <Layout.Section >
+                        <GenerationControls
+              productImage={productImage || DEFAULT_PRODUCT_IMAGE}
+              initialDescriptionFromPrompt={initialPrompt}
+              onGenerateImages={(count) => {
+                console.log(`Generating ${count} images…`);
+                if (freeImagesLeft >= count) {
+                  setFreeImagesLeft(freeImagesLeft - count);
+                }
+              }}
+            />
+
+          </Layout.Section>
+
+          {/* Generation controls */}
+          <Layout.Section variant="oneThird">
+            <ImagePreview
+              productImage={productImage || DEFAULT_PRODUCT_IMAGE}
+
+            />
+            <Box paddingBlockStart="400" />
+            <StickerSettings
+              imageScale={imageScale}
+              onScaleChange={setImageScale}
+              morphologyPadding={morphologyPadding}
+              onPaddingChange={setMorphologyPadding}
+              stickerFinish={stickerFinish}
+              onFinishChange={setStickerFinish}
+              stickerOverlay={stickerOverlay}
+              onOverlayChange={setStickerOverlay}
+            />
+          </Layout.Section>
+        </Layout>
+      )}
+    </Page>
   );
 }

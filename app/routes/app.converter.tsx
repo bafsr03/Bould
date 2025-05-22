@@ -1,4 +1,3 @@
-// src/pages/ConverterPage.tsx
 import React, { useState, useCallback } from "react";
 import {
   Page,
@@ -14,6 +13,7 @@ import {
   SkeletonDisplayText,
   TextContainer,
   Banner,
+  Link,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 
@@ -29,7 +29,7 @@ export default function ConverterPage() {
 
   const handleTabChange = useCallback(
     (selectedTabIndex: number) => setSelected(selectedTabIndex),
-    []
+    [],
   );
 
   const tabs = [
@@ -49,6 +49,9 @@ export default function ConverterPage() {
       panelID: "analytics-panel",
     },
   ];
+
+  // Determine the title based on active tab
+  const pageTitle = tabs[selected].content;
 
   const renderAnalyticsSection = () => (
     <>
@@ -113,14 +116,14 @@ export default function ConverterPage() {
       <TitleBar title="Bould" />
       <Layout>
         <Layout.Section>
+          {/* Dynamic heading based on selected tab */}
+          <Text variant="headingXl" as="h1">
+            {pageTitle}
+          </Text>
           <Tabs tabs={tabs} selected={selected} onSelect={handleTabChange}>
-            <LegacyCard.Section >
+            <LegacyCard.Section>
               {selected === 0 && (
                 <>
-                  <Text variant="headingXl" as="h1">
-                    Converter
-                  </Text>
-
                   <CalloutCard
                     title="Watch the Steps to Convert any 2D image"
                     illustration="https://cdn.shopify.com/s/assets/admin/checkout/settings-customizecart-705f57c725ac05be5a34ec20c05b94298cb8afd10aac7bd9c7ad02030f48cfa0.svg"
@@ -128,7 +131,8 @@ export default function ConverterPage() {
                     secondaryAction={{ content: "Watch Tutorial" }}
                   >
                     <p>
-                      To upload your Garment to the Converter, drag and drop your Design in the drop zone, or click on upload.
+                      To upload your Garment to the Converter, drag and drop
+                      your Design in the drop zone, or click on upload.
                     </p>
                   </CalloutCard>
 
@@ -145,7 +149,7 @@ export default function ConverterPage() {
                     </InlineGrid>
                   </Box>
 
-                  <Box paddingBlockStart="400">
+                  <Box paddingBlockStart="800">
                     <InlineGrid
                       columns={{ xs: "1fr", sm: ["oneThird", "twoThirds"] }}
                       gap="400"
@@ -155,21 +159,35 @@ export default function ConverterPage() {
                     </InlineGrid>
                   </Box>
 
-                  <Box paddingBlockStart="400">
+                  <Box >
                     <TechnicalPackage />
                   </Box>
                 </>
               )}
 
-              {selected === 1 && (
-                <LibraryTable />
-              )}
+              {selected === 1 && <LibraryTable />}
 
               {selected === 2 && renderAnalyticsSection()}
             </LegacyCard.Section>
           </Tabs>
         </Layout.Section>
       </Layout>
+              {/* Footer */}
+              <Box padding="500">
+                <div style={{ textAlign: "center" }}>
+                  <Text as="h4" tone="subdued">
+                    Need help?{" "}
+                    <Link url="mailto:jake@bouldhq.com" removeUnderline>
+                      Chat with us.
+                    </Link>
+                  </Text>
+                  <Box paddingBlockStart="100">
+                    <Text as="h4" tone="subdued">
+                      © 2025 Bould
+                    </Text>
+                  </Box>
+                </div>
+              </Box>
     </Page>
   );
 }
