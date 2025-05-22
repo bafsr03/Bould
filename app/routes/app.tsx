@@ -27,6 +27,7 @@ export default function App() {
         <Link to="/app/converter">Converter</Link>
         <Link to="/app/blanks">Blanks</Link>
         <Link to="/app/stickers">Stickers</Link>
+        <Link to="/app/orders">Orders</Link>
         <Link to="/app/pricing">Pricing</Link>
       </NavMenu>
       <Outlet />

@@ -41,7 +41,15 @@ export default function TechnicalPackageCard() {
     <Page title="Technical Package">
       <Layout>
         <Layout.Section>
-          <Box padding="400" background="bg-surface" borderRadius="300">
+          <Box
+  background="bg-surface-secondary"
+  padding="500"
+  borderRadius="200"
+  borderColor="border" // Use a theme token for border color
+  borderWidth="050"    // Use a theme token for border width (e.g., 1px)
+  // Or, for a more subdued border:
+  // borderColor="border-subdued"
+>
             <BlockStack gap="300">
               {/* Title and Actions */}
               <InlineStack align="space-between">

@@ -98,7 +98,7 @@ export function InitialStickerGeneration({ onGenerate }: InitialStickerGeneratio
               variant="primary"
               size="large"
               onClick={handleGenerateClick}
-              disabled={!selectedImage || !stickerPrompt.trim()}
+              disabled={ !stickerPrompt.trim()}
             >
               Generate Backgrounds
             </Button>

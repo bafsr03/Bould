@@ -11,9 +11,8 @@ import {
 } from "@shopify/polaris";
 import MediaSection from "./blanksComponents/MediaSection";
 import SalesCard from "./blanksComponents/OrderCard";
-import OrdersCard from "./blanksComponents/PaymentCard";
-import type { Order } from "./blanksComponents/OrdersSection";
-import OrderSection from "./blanksComponents/OrdersSection";
+import TechnicalPackages from "./blanksComponents/TechnicalPackage";
+
 
 const mediaImages = [
   "https://i.imgur.com/mW4frY9.jpeg",
@@ -23,55 +22,19 @@ const mediaImages = [
   "https://i.imgur.com/mW4frY9.jpeg",
 ];
 
-// Sample orders for demo—swap in your real data
-const sampleOrders: Order[] = [
-  {
-    id: "001",
-    order: (
-      <Text as="span" variant="bodyMd" fontWeight="semibold">
-        #001
-      </Text>
-    ),
-    date: "Jul 20 at 4:34pm",
-    blanks: "Bould hoodie",
-    total: "$969.44",
-    paymentStatus: <Badge progress="complete">Paid</Badge>,
-    fulfillmentStatus: <Badge progress="incomplete">Unfulfilled</Badge>,
-  },
-  {
-    id: "019",
-    order: (
-      <Text as="span" variant="bodyMd" fontWeight="semibold">
-        #019
-      </Text>
-    ),
-    date: "Jul 29 at 3:46pm",
-    blanks: "Cargo Pants",
-    total: "$701.19",
-    paymentStatus: <Badge progress="partiallyComplete">Partially paid</Badge>,
-    fulfillmentStatus: <Badge progress="incomplete">Unfulfilled</Badge>,
-  },
-  {
-    id: "040",
-    order: (
-      <Text as="span" variant="bodyMd" fontWeight="semibold">
-        #040
-      </Text>
-    ),
-    date: "sept 13 at 3:44pm",
-    blanks: "5 Panel cap",
-    total: "$798.24",
-    paymentStatus: <Badge progress="complete">Paid</Badge>,
-    fulfillmentStatus: <Badge progress="incomplete">Unfulfilled</Badge>,
-  },
-];
-
 export default function BlanksPage() {
   const [category, setCategory] = useState("T-shirts");
   const handleCategory = useCallback(
     (cat: React.SetStateAction<string>) => setCategory(cat),
     [],
   );
+
+  // CSS to make LegacyCard stretch to the height of its wrapper
+  const stretchStyles = `
+    .equal-height-card-wrapper > .Polaris-LegacyCard {
+      height: 100%;
+    }
+  `;
 
   return (
     <>
@@ -91,6 +54,9 @@ export default function BlanksPage() {
           </Layout.Section>
         </Layout>
       </Page>
+
+      {/* Inject styles for equal height cards */}
+      <style>{stretchStyles}</style>
 
       {/* — Product detail page — */}
       <Page
@@ -130,18 +96,18 @@ export default function BlanksPage() {
           <Layout.Section>
             <Grid>
               <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 6, xl: 6 }}>
-                <SalesCard />
+                <div style={{ height: '100%' }} className="equal-height-card-wrapper">
+                  <TechnicalPackages  />
+                </div>
               </Grid.Cell>
               <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 6, xl: 6 }}>
-                <OrdersCard />
+                <div style={{ height: '100%' }} className="equal-height-card-wrapper">
+                  <SalesCard />
+                </div>
               </Grid.Cell>
             </Grid>
           </Layout.Section>
 
-          {/* ← New: Orders table section */}
-          <Layout.Section>
-            <OrderSection orders={sampleOrders} />
-          </Layout.Section>
         </Layout>
         {/* Footer */}
         <Box padding="1000">

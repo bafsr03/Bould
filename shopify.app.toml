@@ -3,7 +3,7 @@
 client_id = "b6d437a7d969cd77e40e9cb95583c5fd"
 name = "Bould"
 handle = "bould"
-application_url = "https://mo-rarely-copy-connecticut.trycloudflare.com"
+application_url = "https://is-nyc-ordinance-des.trycloudflare.com"
 embedded = true
 
 [build]
@@ -27,9 +27,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://mo-rarely-copy-connecticut.trycloudflare.com/auth/callback",
-  "https://mo-rarely-copy-connecticut.trycloudflare.com/auth/shopify/callback",
-  "https://mo-rarely-copy-connecticut.trycloudflare.com/api/auth/callback"
+  "https://is-nyc-ordinance-des.trycloudflare.com/auth/callback",
+  "https://is-nyc-ordinance-des.trycloudflare.com/auth/shopify/callback",
+  "https://is-nyc-ordinance-des.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]

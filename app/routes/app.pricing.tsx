@@ -16,7 +16,6 @@ import {
 import { TitleBar } from "@shopify/app-bridge-react";
 import { CheckIcon } from "@shopify/polaris-icons";
 
-
 export default function PricingPage() {
   return (
     <Page>
@@ -50,6 +49,8 @@ export default function PricingPage() {
                   background="bg-surface-secondary"
                   padding="200"
                   borderRadius="200"
+                  borderColor="border"
+                  borderWidth="050"
                 >
                   <Text tone="subdued" as="h4">
                     You've had 0 unique visitors in the last day (equivalent to
@@ -78,6 +79,8 @@ export default function PricingPage() {
                       padding="300"
                       borderRadius="300"
                       minHeight="100%"
+                      borderColor="border"
+                      borderWidth="050"
                     >
                       <div
                         style={{
@@ -148,7 +151,13 @@ export default function PricingPage() {
             </Box>
 
             {/* Enterprise Box */}
-            <Box background="bg-surface" padding="300" borderRadius="300">
+            <Box
+              background="bg-surface"
+              padding="300"
+              borderRadius="300"
+              borderColor="border"
+              borderWidth="050"
+            >
               <BlockStack gap="400">
                 <InlineGrid columns="1fr auto" gap="100">
                   <Text as="h2" variant="headingXl">
@@ -196,7 +205,11 @@ const plans = [
     name: "Starter",
     price: "Free",
     trial: "14-day free trial (13 days remaining)",
-    features: ["Limited AI sticker usage", "Access to limited Try-On ", "AR Try-On included (5 models/month)"],
+    features: [
+      "Limited AI sticker usage",
+      "Access to limited Try-On ",
+      "AR Try-On included (5 models/month)",
+    ],
     cta: "Choose plan",
     recommended: false,
   },
@@ -208,7 +221,7 @@ const plans = [
       "Unlimited AI sticker generation",
       "Full access to Blanks Design Lab",
       "Standard creator support",
-      "AR Try-On included (50 models/month)"
+      "AR Try-On included (50 models/month)",
     ],
     cta: "Choose plan",
     recommended: false,
