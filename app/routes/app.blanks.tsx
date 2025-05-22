@@ -144,7 +144,7 @@ export default function BlanksPage() {
           </Layout.Section>
         </Layout>
         {/* Footer */}
-        <Box padding="500">
+        <Box padding="1000">
           <div style={{ textAlign: "center" }}>
             <Text as="h4" tone="subdued">
               Need help?{" "}

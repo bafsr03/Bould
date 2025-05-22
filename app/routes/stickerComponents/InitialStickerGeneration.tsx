@@ -6,12 +6,12 @@ import {
   Text,
   Button,
   InlineStack,
-  Icon,
   TextField,
   Box,
   Thumbnail,
 } from '@shopify/polaris';
-import { ProductIcon, UploadIcon, NoteIcon } from '@shopify/polaris-icons'; // NoteIcon for the tag icon
+import { ProductIcon, UploadIcon } from '@shopify/polaris-icons'; // NoteIcon for the tag icon
+import { ShinySticker } from './ShinySticker'; // Import ShinySticker component
 
 // Placeholder image URL for demonstration
 const DEFAULT_PRODUCT_IMAGE_UPLOADED = 'https://burst.shopifycdn.com/photos/orange-leather-cap-with-white-letter-c.jpg?width=373&format=pjpg&exif=0&iptc=0';
@@ -50,8 +50,12 @@ export function InitialStickerGeneration({ onGenerate }: InitialStickerGeneratio
     // Here we use a standard Card.
     <Card>
       <Box padding="600"> {/* Added padding for inner content */}
-        <BlockStack gap="500" align="center">
-          <Icon source={NoteIcon} tone="base" />
+        <BlockStack gap="500" inlineAlign="center">
+          <ShinySticker
+            url="https://i.imgur.com/XDIVOSU.png"
+            width="200px"
+            rotate="0deg"
+          />
           <Text variant="headingLg" as="h2">
             Start generating
           </Text>
@@ -89,7 +93,7 @@ export function InitialStickerGeneration({ onGenerate }: InitialStickerGeneratio
             />
           </Box>
 
-          <Box paddingBlockStart="300">
+          <Box  paddingBlockStart="300">
             <Button
               variant="primary"
               size="large"

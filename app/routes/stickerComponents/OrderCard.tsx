@@ -19,7 +19,7 @@ import {
 } from '@shopify/polaris-icons';
 
 const armchairImageUrl =
-  'https://burst.shopifycdn.com/photos/blue-armchair-against-white-background.jpg?width=100';
+  'https://i.imgur.com/p5eOV3L.png';
 
 export default function OrderCard() {
   return (
@@ -33,7 +33,7 @@ export default function OrderCard() {
           {/* Left part: Badges */}
           <LegacyStack.Item>
             <LegacyStack spacing="tight" alignment="center" wrap={false}>
-              <Badge icon={ReceiptIcon}>#041</Badge>
+              <Badge icon={ReceiptIcon}>#042</Badge>
               <Badge tone="warning" icon={AlertCircleIcon}>
                 Payment pending
               </Badge>
@@ -43,24 +43,11 @@ export default function OrderCard() {
             </LegacyStack>
           </LegacyStack.Item>
 
-          {/* Right part: Price, fills remaining space */}
-          <LegacyStack.Item fill>
-            <Text
-              variant="bodyMd"
-              fontWeight="semibold"
-              as="p"
-              alignment="end" // Align text to the right
-            >
-              $25.00
-            </Text>
-          </LegacyStack.Item>
+
         </LegacyStack>
 
         {/* Date with extra spacing above & below */}
-        <Box paddingBlockStart="300" paddingBlockEnd="300">
-          <Text variant="bodyMd" tone="critical" as="p">
-            Missing sizes and colors. Go back to converter
-          </Text>
+        <Box paddingBlockStart="200" paddingBlockEnd="200">
         </Box>
       </LegacyCard.Section>
 
@@ -80,11 +67,11 @@ export default function OrderCard() {
               />
               <div>
                 <Text variant="bodyMd" fontWeight="semibold" as="p">
-                  Bould Blanks Hoodie
+                  Batch of Stickers 
                 </Text>
                 <LegacyStack spacing="extraTight" wrap={false}>
-                  <Tag>Nylon</Tag>
-                  <Tag>Woven</Tag>
+                  <Tag>Vinyl</Tag>
+                  <Tag>Matte</Tag>
                 </LegacyStack>
               </div>
             </LegacyStack>
@@ -97,7 +84,7 @@ export default function OrderCard() {
               {/* Quantity part, takes its natural width */}
               <LegacyStack.Item>
                 <Text variant="bodyMd" as="p">
-                  x50
+                  x100
                 </Text>
               </LegacyStack.Item>
               {/* Price part, fills remaining space in this inner stack */}
@@ -108,7 +95,7 @@ export default function OrderCard() {
                   as="p"
                   alignment="end" // Align price text to the right
                 >
-                  $1,250.00
+                  $95.00
                 </Text>
               </LegacyStack.Item>
             </LegacyStack>
@@ -121,7 +108,7 @@ export default function OrderCard() {
         <LegacyStack distribution="trailing">
           <ButtonGroup>
             <Button onClick={() => console.log('Update orders clicked')}>
-              Update orders
+              Make an Order
             </Button>
             <Button
               variant="primary"
@@ -129,7 +116,7 @@ export default function OrderCard() {
               icon={PlusIcon}
               onClick={() => console.log('Create order clicked')}
             >
-              Create order
+              Make Payment
             </Button>
           </ButtonGroup>
         </LegacyStack>

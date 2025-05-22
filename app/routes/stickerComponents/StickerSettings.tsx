@@ -1,6 +1,18 @@
 // app/components/StickerSettings.tsx
 import React from 'react';
-import { Card, Box, Text, RangeSlider, FormLayout, Select } from '@shopify/polaris';
+import {
+  Card,
+  Box,
+  Text,
+  RangeSlider,
+  FormLayout,
+  Select,
+  Button,
+  ButtonGroup,
+  Popover,
+  ActionList,
+} from '@shopify/polaris';
+import { ChevronDownIcon } from '@shopify/polaris-icons';
 
 interface StickerSettingsProps {
   /** Scale percentage of the product preview (10–100) */
@@ -41,6 +53,10 @@ export function StickerSettings({
     { label: 'Holographic', value: 'Holographic' },
   ];
 
+  const [popoverActive, setPopoverActive] = React.useState(false);
+
+  const togglePopoverActive = () => setPopoverActive((active) => !active);
+
   return (
     <Card>
       <Box padding="400">
@@ -74,7 +90,7 @@ export function StickerSettings({
           suffix="px"
           helpText="Add transparent padding around the sticker."
         />
-        <Box paddingBlockStart="400" />
+        <Box paddingBlockStart="200" />
         <Text variant="bodyMd" as="h3" fontWeight="semibold">
           3. Choose sticker details
         </Text>
@@ -93,6 +109,35 @@ export function StickerSettings({
             value={stickerOverlay}
           />
         </FormLayout>
+        <Box
+
+          as="div"
+          style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '30px' }}
+        >
+          <ButtonGroup variant="segmented">
+            <Button disabled variant="primary">Save Sticker</Button>
+            <Popover
+              active={popoverActive}
+              preferredAlignment="right"
+              activator={
+                <Button
+                disabled
+                  variant="primary"
+                  onClick={togglePopoverActive}
+                  icon={ChevronDownIcon}
+                  accessibilityLabel="Other save actions"
+                />
+              }
+              autofocusTarget="first-node"
+              onClose={togglePopoverActive}
+            >
+              <ActionList
+                actionRole="menuitem"
+                items={[{ content: 'Save Sticker Pack' }]}
+              />
+            </Popover>
+          </ButtonGroup>
+        </Box>
       </Box>
     </Card>
   );

@@ -1,5 +1,4 @@
-// app/components/GenerationControls.tsx
-import { useState, useCallback } from 'react';
+import {useState, useCallback, useRef, useEffect} from 'react';
 import {
   Card,
   Tabs,
@@ -10,18 +9,67 @@ import {
   Box,
   Thumbnail,
   Banner,
-  InlineStack,
+  LegacyCard,
+  SkeletonTabs,
+  Link,
   DropZone,
+  LegacyStack,
 } from '@shopify/polaris';
-import { ImageIcon, XCircleIcon, UploadIcon } from '@shopify/polaris-icons';
+import {NoteIcon} from '@shopify/polaris-icons';
+
+// DropZoneExample remains the same
+function DropZoneExample() {
+  const [files, setFiles] = useState<File[]>([]);
+
+  const handleDropZoneDrop = useCallback(
+    (_dropFiles: File[], acceptedFiles: File[], _rejectedFiles: File[]) =>
+      setFiles((prev) => [...prev, ...acceptedFiles]),
+    [],
+  );
+
+  const validImageTypes = ['image/gif', 'image/jpeg', 'image/png'];
+
+  const fileUpload = !files.length && (
+    <DropZone.FileUpload actionHint="Accepts .gif, .jpg, and .png" />
+  );
+
+  const uploadedFiles = files.length > 0 && (
+    <LegacyStack vertical>
+      {files.map((file, index) => (
+        <LegacyStack alignment="center" key={index}>
+          <Thumbnail
+            size="small"
+            alt={file.name}
+            source={
+              validImageTypes.includes(file.type)
+                ? window.URL.createObjectURL(file)
+                : NoteIcon
+            }
+          />
+          <div>
+            {file.name}{' '}
+            <Text variant="bodySm" as="p">
+              {file.size} bytes
+            </Text>
+          </div>
+        </LegacyStack>
+      ))}
+    </LegacyStack>
+  );
+
+  return (
+    <DropZone onDrop={handleDropZoneDrop} variableHeight>
+      {uploadedFiles}
+      {fileUpload}
+    </DropZone>
+  );
+}
+
 
 interface GenerationControlsProps {
   productImage: string;
   initialDescriptionFromPrompt?: string;
-  onGenerateImages: (
-    numberOfImages: number,
-    referenceImageFile?: File // Optional reference image
-  ) => void;
+  onGenerateImages: (numberOfImages: number) => void;
 }
 
 export function GenerationControls({
@@ -38,32 +86,13 @@ export function GenerationControls({
   const [imageScale] = useState<number>(60);
   const [morphologyPadding] = useState<number>(0);
 
-  const [uploadedReferenceFile, setUploadedReferenceFile] = useState<File | null>(null);
-  const [fileRejectionError, setFileRejectionError] = useState<string | null>(null);
-  const [isUploadingReference] = useState(false);
+  // Ref for the generator tab's content area
+  const generatorContentRef = useRef<HTMLDivElement>(null);
+  // State to store the calculated height
+  const [myStickerTabMinHeight, setMyStickerTabMinHeight] = useState<number | string>('auto');
 
-  const handleTabChange = useCallback(
-    (selectedTabIndex: number) => setSelectedTabIndex(selectedTabIndex),
-    [],
-  );
-
-  const handleDescriptionChange = useCallback(
-    (value: string) => setDescription(value),
-    [],
-  );
-
-  // Handle file upload
-  const handleDropZoneDrop = useCallback(
-    (_dropFiles: File[], acceptedFiles: File[], rejectedFiles: File[]) => {
-      if (acceptedFiles && acceptedFiles.length > 0) {
-        setUploadedReferenceFile(acceptedFiles[0]);
-        setFileRejectionError(null);
-      } else if (rejectedFiles && rejectedFiles.length > 0) {
-        setFileRejectionError('File type not supported or file too large.');
-      }
-    },
-    [],
-  );
+  const handleTabChange = useCallback((idx: number) => setSelectedTabIndex(idx), []);
+  const handleDescriptionChange = useCallback((val: string) => setDescription(val), []);
 
   const tabs = [
     {
@@ -75,9 +104,27 @@ export function GenerationControls({
       id: 'template-prompt',
       content: 'MySticker',
       accessibilityLabel:
-        'Generate background from template (coming soon)',
+        'Saving Stickers and creating sticker packs (coming soon)',
     },
   ];
+
+  // Effect to update the height when the generator tab is visible or its content might change
+  useEffect(() => {
+    if (selectedTabIndex === 0 && generatorContentRef.current) {
+      const currentHeight = generatorContentRef.current.offsetHeight;
+      // Only update if the height is different and positive to avoid unnecessary re-renders
+      // or if it was 'auto' initially
+      if (currentHeight > 0 && myStickerTabMinHeight !== currentHeight) {
+        setMyStickerTabMinHeight(currentHeight);
+      }
+    }
+    // Dependencies:
+    // - selectedTabIndex: to re-measure when Generator tab becomes active.
+    // - productImage, description: if these change, Generator tab height might change.
+    // - files from DropZoneExample also affects height, but this effect will capture
+    //   the new offsetHeight when generatorContentRef.current is available.
+  }, [selectedTabIndex, productImage, description, myStickerTabMinHeight]);
+
 
   const checkeredBgStyle: React.CSSProperties = {
     backgroundImage:
@@ -85,7 +132,7 @@ export function GenerationControls({
     backgroundSize: '20px 20px',
     backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
     width: '100%',
-    minHeight: '250px',
+    minHeight: '250px', // This contributes to the generator's height
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -97,151 +144,109 @@ export function GenerationControls({
 
   const unscaledImageMaxPreviewSize = '250px';
 
-  const fileRejectionMarkup = fileRejectionError && (
-    <Box paddingBlockStart="100" paddingBlockEnd="0">
-      <Banner
-        title="Reference image error"
-        tone="critical"
-        onDismiss={() => setFileRejectionError(null)}
-      >
-        <p>{fileRejectionError}</p>
-      </Banner>
-    </Box>
-  );
-
-  // Content for the DropZone when no file is selected, or to change it
-  const dropZoneButtonActivator = (
-    <Button
-      icon={uploadedReferenceFile ? ImageIcon : UploadIcon}
-      size="slim"
-      disabled={isUploadingReference}
-      loading={isUploadingReference}
-    >
-    </Button>
-  );
-
-  // Preview for the uploaded file, shown instead of the "Add Ref" button
-  const uploadedFilePreviewMarkup = uploadedReferenceFile && !isUploadingReference && (
-    <InlineStack gap="100" blockAlign="center" wrap={false}>
-      <Thumbnail
-        size="extraSmall"
-        alt={uploadedReferenceFile.name}
-        source={URL.createObjectURL(uploadedReferenceFile)}
-      />
-      <Text variant="bodySm" as="span" truncate>
-        {uploadedReferenceFile.name.length > 15
-          ? uploadedReferenceFile.name.substring(0, 12) + '...'
-          : uploadedReferenceFile.name}
-      </Text>
-      <Button
-        icon={XCircleIcon}
-        onClick={() => {
-          setUploadedReferenceFile(null);
-          setFileRejectionError(null);
-        }}
-        accessibilityLabel="Remove reference image"
-        size="slim"
-      />
-    </InlineStack>
-  );
-
   return (
     <Card>
-      <Tabs tabs={tabs} selected={selectedTabIndex} onSelect={handleTabChange} fitted>
+      <Tabs selected={selectedTabIndex} onSelect={handleTabChange} tabs={tabs} fitted>
         <Box padding="400">
           {selectedTabIndex === 0 && (
-            <BlockStack gap="600">
-              <div> {/* Step 1: Product Image Adjustments (Main Sticker) */}
-                <Text variant="bodyMd" as="h3" fontWeight="semibold">
-                  1. Adjust product image
-                </Text>
-                <Box paddingBlockStart="200" />
-                <div style={checkeredBgStyle}>
-                  <div
-                    style={{
-                      display: 'inline-block',
-                      transform: `scale(${imageScale / 100})`,
-                      transition: 'transform 0.1s ease-out',
-                    }}
-                  >
-                    <img
-                      src={productImage}
-                      alt="Product to edit"
+            <div ref={generatorContentRef}>
+              <BlockStack gap="600">
+                {/* Sticker Preview */}
+                <div>
+                  <Text variant="bodyMd" as="h3" fontWeight="semibold">
+                    View Sticker Preview
+                  </Text>
+                  <Box paddingBlockStart="200" />
+                  <div style={checkeredBgStyle}>
+                    <div
                       style={{
-                        display: 'block',
-                        maxWidth: unscaledImageMaxPreviewSize,
-                        maxHeight: unscaledImageMaxPreviewSize,
-                        objectFit: 'contain',
-                        padding: `${morphologyPadding}px`,
-                        boxSizing: 'border-box',
-                        backgroundColor: 'transparent',
-                        transition: 'padding 0.1s ease-out',
+                        display: 'inline-block',
+                        transform: `scale(${imageScale / 100})`, // Corrected template literal
+                        transition: 'transform 0.1s ease-out',
                       }}
-                    />
+                    >
+                      <img
+                        src={productImage}
+                        alt="Product to edit"
+                        style={{
+                          display: 'block',
+                          maxWidth: unscaledImageMaxPreviewSize,
+                          maxHeight: unscaledImageMaxPreviewSize,
+                          objectFit: 'contain',
+                          padding: `${morphologyPadding}px`, // Corrected template literal
+                          boxSizing: 'border-box',
+                          transition: 'padding 0.1s ease-out',
+                        }}
+                      />
+                    </div>
                   </div>
+                  <Box paddingBlockStart="200" />
                 </div>
-                <Box paddingBlockStart="200" />
-              </div>
 
-              {/* Step 2: Reference Image Upload */}
-              <div>
-                {fileRejectionMarkup}
-                <Box paddingBlockStart={fileRejectionMarkup ? "100" : "200"} />
-                <Text variant="bodyMd" as="h3" fontWeight="semibold">
-                  2. (Optional) Add reference image
-                </Text>
-                <Box paddingBlockStart="100" />
-                <DropZone
-                  allowMultiple={false}
-                  onDrop={handleDropZoneDrop}
-                  accept="image/*"
-                  disabled={isUploadingReference}
-                  outline
+                {/* Background Description + New DropZone */}
+                <div>
+                  <Text variant="bodyMd" as="h3" fontWeight="semibold">
+                    Background Description
+                  </Text>
+                  <Box paddingBlockStart="100" />
+                  <TextField
+                    label="Background description"
+                    labelHidden
+                    value={description}
+                    onChange={handleDescriptionChange}
+                    multiline={2}
+                    maxLength={250}
+                    showCharacterCount
+                    autoComplete="off"
+                    placeholder="e.g., A sun-drenched wooden table with blurred cafe background"
+                  />
+                  <Box paddingBlockStart="200" />
+                  <DropZoneExample />
+                </div>
+
+                <Button
+                  variant="primary"
+                  size="large"
+                  fullWidth
+                  onClick={() => onGenerateImages(numImagesToGenerate)}
                 >
-                  {uploadedFilePreviewMarkup || dropZoneButtonActivator}
-                </DropZone>
-              </div>
-
-              {/* Step 3: Describe Background */}
-              <div>
-                <Box paddingBlockStart="200" />
-                <TextField
-                  label="Background Description"
-                  labelHidden
-                  value={description}
-                  onChange={handleDescriptionChange}
-                  multiline={4}
-                  maxLength={250}
-                  showCharacterCount
-                  autoComplete="off"
-                  placeholder="e.g., A sun-drenched wooden table with blurred cafe background"
-                />
-              </div>
-
-              <Button
-                variant="primary"
-                size="large"
-                fullWidth
-                onClick={() =>
-                  onGenerateImages(
-                    numImagesToGenerate,
-                    uploadedReferenceFile || undefined,
-                  )
-                }
-              >
-                Generate images
-              </Button>
-            </BlockStack>
+                  Generate images
+                </Button>
+              </BlockStack>
+            </div>
           )}
+
           {selectedTabIndex === 1 && (
-            <BlockStack gap="300" align="center">
-              <Text variant="headingMd" as="h3">
-                Template Selection
-              </Text>
-              <Text variant="bodyMd" as="p" tone="subdued">
-                Choosing from pre-designed templates is coming soon!
-              </Text>
-            </BlockStack>
+            <div
+              style={{
+                minHeight: myStickerTabMinHeight,
+                display: 'flex',
+                flexDirection: 'column',
+                // If you want to vertically center the content of MySticker tab:
+                // justifyContent: 'center',
+              }}
+            >
+              <BlockStack
+                gap="400"
+                align="center"
+              >
+                <Text variant="headingMd" as="h3">
+                  Sticker packs
+                </Text>
+                <Banner onDismiss={() => {}}>
+                  <p>
+                    Saving Stickers and creating sticker packs (coming soon){' '}
+                    <Link url="">Let us know what you want to see</Link>
+                  </p>
+                </Banner>
+                <LegacyCard>
+                  <SkeletonTabs fitted />
+                </LegacyCard>
+                {/* You might want a spacer or set justifyContent on the BlockStack */}
+                {/* For example, to push SkeletonTabs down if BlockStack is taller: */}
+                {/* <div style={{ marginTop: 'auto' }} />  // Pushes subsequent items down */}
+              </BlockStack>
+            </div>
           )}
         </Box>
       </Tabs>
