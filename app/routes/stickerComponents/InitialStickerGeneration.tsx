@@ -1,5 +1,5 @@
 // app/components/InitialStickerGeneration.tsx
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react'; // Added useRef
 import {
   Card,
   BlockStack,
@@ -10,10 +10,10 @@ import {
   Box,
   Thumbnail,
 } from '@shopify/polaris';
-import { ProductIcon, UploadIcon } from '@shopify/polaris-icons'; // NoteIcon for the tag icon
+import { ProductIcon, UploadIcon } from '@shopify/polaris-icons';
 import { ShinySticker } from './ShinySticker'; // Import ShinySticker component
 
-// Placeholder image URL for demonstration
+// Placeholder image URL for "Select a product" demonstration
 const DEFAULT_PRODUCT_IMAGE_UPLOADED = 'https://burst.shopifycdn.com/photos/orange-leather-cap-with-white-letter-c.jpg?width=373&format=pjpg&exif=0&iptc=0';
 
 interface InitialStickerGenerationProps {
@@ -23,17 +23,48 @@ interface InitialStickerGenerationProps {
 export function InitialStickerGeneration({ onGenerate }: InitialStickerGenerationProps) {
   const [stickerPrompt, setStickerPrompt] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null); // Ref for the hidden file input
 
   const handlePromptChange = useCallback((value: string) => setStickerPrompt(value), []);
 
-  const handleSimulateImageSelection = () => {
-    // In a real app, this would involve a file upload or product picker
+  // This function is for the "Select a product" button
+  const handleSelectProductClick = () => {
     setSelectedImage(DEFAULT_PRODUCT_IMAGE_UPLOADED);
+  };
+
+  // This function is called when the "Upload image" button is clicked
+  const handleUploadImageButtonClick = () => {
+    fileInputRef.current?.click(); // Programmatically click the hidden file input
+  };
+
+  // This function is called when a file is selected via the file input
+  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage(reader.result as string); // Set the image as a base64 data URL
+      };
+      reader.onerror = () => {
+        console.error("Error reading file.");
+        // Optionally, inform the user about the error
+        alert("There was an error uploading your image. Please try again.");
+        setSelectedImage(null);
+      }
+      reader.readAsDataURL(file);
+    } else {
+      // If no file is selected (e.g., user cancels the dialog), clear any existing selection
+      // or keep the previous one, depending on desired behavior. Here we clear it.
+      // setSelectedImage(null); // Or do nothing to keep previous if one existed
+    }
+    // Reset the file input's value to allow selecting the same file again
+    if (event.target) {
+      event.target.value = '';
+    }
   };
 
   const handleGenerateClick = () => {
     if (!selectedImage) {
-      // You might want to use a Toast or Banner for errors in a real app
       alert('Please select or upload an image first.');
       return;
     }
@@ -45,9 +76,6 @@ export function InitialStickerGeneration({ onGenerate }: InitialStickerGeneratio
   };
 
   return (
-    // The screenshot shows a dark card. Polaris Card respects the theme.
-    // Forcing a dark card on a potentially light theme might require Box with background props or custom CSS.
-    // Here we use a standard Card.
     <Card>
       <Box padding="600"> {/* Added padding for inner content */}
         <BlockStack gap="500" inlineAlign="center">
@@ -63,11 +91,20 @@ export function InitialStickerGeneration({ onGenerate }: InitialStickerGeneratio
             Upload a product image or select one from your catalog to generate AI-designed backgrounds.
           </Text>
 
+          {/* Hidden file input, triggered by the "Upload image" button */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            accept="image/*" // Restrict to image files (e.g., image/png, image/jpeg)
+            onChange={handleFileSelected}
+          />
+
           <InlineStack gap="300" align="center">
-            <Button onClick={handleSimulateImageSelection} icon={UploadIcon}>
+            <Button onClick={handleUploadImageButtonClick} icon={UploadIcon}>
               Upload image
             </Button>
-            <Button onClick={handleSimulateImageSelection} icon={ProductIcon} variant="secondary">
+            <Button onClick={handleSelectProductClick} icon={ProductIcon} variant="secondary">
               Select a product
             </Button>
           </InlineStack>
@@ -98,7 +135,7 @@ export function InitialStickerGeneration({ onGenerate }: InitialStickerGeneratio
               variant="primary"
               size="large"
               onClick={handleGenerateClick}
-              disabled={ !stickerPrompt.trim()}
+              disabled={!selectedImage || !stickerPrompt.trim()} // Disable if no image or prompt
             >
               Generate Backgrounds
             </Button>

@@ -1,4 +1,6 @@
-import React from 'react';
+
+
+import React, { useState } from 'react'; // Added useState
 import {
   LegacyCard,
   LegacyStack, // LegacyStack.Item will be used from here
@@ -10,6 +12,7 @@ import {
   ButtonGroup,
   Divider,
   Box,
+  TextField, // Added TextField
 } from '@shopify/polaris';
 import {
   ReceiptIcon,
@@ -22,6 +25,23 @@ const armchairImageUrl =
   'https://i.imgur.com/p5eOV3L.png';
 
 export default function OrderCard() {
+  // State for the sticker quantity
+  const [stickerQuantity, setStickerQuantity] = useState('100'); // Initial quantity as string
+
+  const handleQuantityChange = (newValue: string) => {
+    // Allow only numbers or empty string for clearing the input
+    if (/^\d*$/.test(newValue)) {
+      setStickerQuantity(newValue);
+    }
+  };
+
+  // Calculate total price based on quantity
+  // Assuming a base price of $0.95 per sticker for the example price of $95.00 for 100 stickers
+  const pricePerSticker = 0.95;
+  const currentQuantity = parseInt(stickerQuantity, 10) || 0; // Parse to int, default to 0 if NaN
+  const totalPrice = (currentQuantity * pricePerSticker).toFixed(2);
+
+
   return (
     <LegacyCard>
       <LegacyCard.Header title="Place an order" />
@@ -67,7 +87,7 @@ export default function OrderCard() {
               />
               <div>
                 <Text variant="bodyMd" fontWeight="semibold" as="p">
-                  Batch of Stickers 
+                  Batch of Stickers
                 </Text>
                 <LegacyStack spacing="extraTight" wrap={false}>
                   <Tag>Vinyl</Tag>
@@ -83,9 +103,18 @@ export default function OrderCard() {
             <LegacyStack alignment="center" spacing="tight" wrap={false}>
               {/* Quantity part, takes its natural width */}
               <LegacyStack.Item>
-                <Text variant="bodyMd" as="p">
-                  x100
-                </Text>
+                <TextField
+                  label="Quantity"
+                  labelHidden
+                  type="text" // Using text to allow finer control with regex, but acts like number
+                  value={stickerQuantity}
+                  onChange={handleQuantityChange}
+                  autoComplete="off"
+                  prefix="x"
+                  inputMode="numeric" // Helps mobile keyboards
+                  // You might want to add min/max or other validation as needed
+                  // For example, to ensure it's not negative or zero in some contexts
+                />
               </LegacyStack.Item>
               {/* Price part, fills remaining space in this inner stack */}
               <LegacyStack.Item fill>
@@ -95,7 +124,7 @@ export default function OrderCard() {
                   as="p"
                   alignment="end" // Align price text to the right
                 >
-                  $95.00
+                  ${totalPrice}
                 </Text>
               </LegacyStack.Item>
             </LegacyStack>
@@ -107,14 +136,14 @@ export default function OrderCard() {
       <LegacyCard.Section>
         <LegacyStack distribution="trailing">
           <ButtonGroup>
-            <Button onClick={() => console.log('Update orders clicked')}>
+            <Button onClick={() => console.log('Make an Order clicked with quantity:', stickerQuantity)}>
               Make an Order
             </Button>
             <Button
               variant="primary"
-              disabled
+              disabled // Kept disabled as per original, can be enabled based on logic
               icon={PlusIcon}
-              onClick={() => console.log('Create order clicked')}
+              onClick={() => console.log('Make Payment clicked')}
             >
               Make Payment
             </Button>

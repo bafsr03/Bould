@@ -17,7 +17,7 @@ const allProducts = [
     id: "1",
     name: " Blanks Hoodie",
     image:
-      "https://cdn.shopify.com/s/files/1/0757/9955/files/Drawer.png",
+      "https://i.imgur.com/H7Utdza.png",
     materials: ["French terry", "Cotton", "Polyester"],
     converted: true,
     status: "active",
@@ -26,7 +26,7 @@ const allProducts = [
     id: "3",
     name: "Retro Coffee Table",
     image:
-      "https://cdn.shopify.com/s/files/1/0757/9955/files/Table.png",
+      "https://media.istockphoto.com/id/1368342833/photo/end-table-round-coffee-table-isolated-on-white.jpg?s=612x612&w=0&k=20&c=pOOmk6eyEfiv1x8toQkPWjDmTfBYJ9y5y2RTIaEBeGU=",
     materials: [""],
     converted: false,
     status: "inactive", // <-- changed to inactive
@@ -35,18 +35,18 @@ const allProducts = [
     id: "3",
     name: "T-shirt",
     image:
-      "https://cdn.shopify.com/s/files/1/0757/9955/files/Table.png",
+      "https://theme-spotlight-demo.myshopify.com/cdn/shop/products/DSC07686_Coffee-Jazz-Rap_Black_Shopify_1080x_3c0ebed9-cef5-46d5-ac64-083c2714af73.webp?v=1676406430&width=1646",
     materials: ["Cotton pima 100%"],
-    converted: true,
+    converted: false,
     status: "draft",
   },
     {
     id: "4",
     name: "Blanks Cap",
     image:
-      "https://cdn.shopify.com/s/files/1/0757/9955/files/Table.png",
+      "https://i.imgur.com/vcFmbkv.png",
     materials: ["Corduroy", "Cotton"],
-    converted: false,
+    converted: true,
     status: "draft",
   },
 ];

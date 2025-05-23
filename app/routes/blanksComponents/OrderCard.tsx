@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   LegacyCard,
   LegacyStack,
@@ -10,65 +10,106 @@ import {
   ButtonGroup,
   Divider,
   Box,
+  TextField,
 } from '@shopify/polaris';
 import {
   ReceiptIcon,
   AlertCircleIcon,
   InfoIcon,
   PlusIcon,
+  XCircleIcon, // Added XCircleIcon
 } from '@shopify/polaris-icons';
 
-const armchairImageUrl =
-  'https://burst.shopifycdn.com/photos/blue-armchair-against-white-background.jpg?width=100';
+interface EditableLineItem {
+  id: number;
+  name: string;
+  tags: string[];
+  quantity: number;
+  price: number;
+  imageUrl: string;
+  unitPrice: number;
+}
 
-const lineItems = [
+const initialLineItemsData = [
   {
     id: 1,
-    name: 'Bould Blanks Hoodie',
+    name: 'Blanks Hoodie',
     tags: ['Nylon', 'Woven'],
     quantity: 50,
     price: 1250.0,
-    imageUrl: armchairImageUrl,
+    imageUrl: "https://i.imgur.com/H7Utdza.png",
   },
   {
     id: 2,
-    name: 'Bould Blanks T-Shirt',
+    name: 'Blanks Short Sleeve Shirt',
     tags: ['Cotton', 'Knit'],
-    quantity: 100,
-    price: 750.0,
+    quantity: 20,
+    price: 900.0,
     imageUrl:
-      'https://burst.shopifycdn.com/photos/white-tshirt-on-hanger.jpg?width=100',
+      'https://i.imgur.com/RKj4YfK.png',
   },
   {
     id: 3,
-    name: 'Bould Blanks Cap',
+    name: ' Blanks Cap',
     tags: ['Polyester', 'Structured'],
     quantity: 30,
     price: 450.0,
     imageUrl:
-      'https://burst.shopifycdn.com/photos/black-snapback-hat.jpg?width=100',
+      'https://i.imgur.com/vcFmbkv.png',
   },
   {
     id: 4,
-    name: 'Bould Performance Shorts',
+    name: 'Blanks Performance Shorts',
     tags: ['Spandex', 'Mesh'],
     quantity: 75,
     price: 900.0,
     imageUrl:
-      'https://burst.shopifycdn.com/photos/gray-workout-shorts.jpg?width=100',
+      'https://i.imgur.com/0n9LFk6.png',
   },
   {
     id: 5,
-    name: 'Bould Cozy Sweater',
+    name: 'Blanks Cozy Sweater',
     tags: ['Wool', 'Cable Knit'],
     quantity: 20,
     price: 1500.0,
     imageUrl:
-      'https://burst.shopifycdn.com/photos/knitted-sweater-on-a-white-background.jpg?width=100',
+      'https://i.imgur.com/ExxOg26.png',
   },
 ];
 
 export default function OrderCard() {
+  const [lineItems, setLineItems] = useState<EditableLineItem[]>(() =>
+    initialLineItemsData.map(item => ({
+      ...item,
+      unitPrice: item.quantity !== 0 ? item.price / item.quantity : 0,
+    }))
+  );
+
+  const handleQuantityChange = useCallback((itemId: number, newQuantityStr: string) => {
+    setLineItems(prevItems =>
+      prevItems.map(item => {
+        if (item.id === itemId) {
+          if (!/^\d*$/.test(newQuantityStr)) {
+            return item;
+          }
+          const newQuantity = newQuantityStr === '' ? 0 : parseInt(newQuantityStr, 10);
+          return {
+            ...item,
+            quantity: newQuantity,
+            price: newQuantity * item.unitPrice,
+          };
+        }
+        return item;
+      })
+    );
+  }, []);
+
+  const handleDeleteItem = useCallback((itemIdToDelete: number) => {
+    setLineItems(prevItems => prevItems.filter(item => item.id !== itemIdToDelete));
+  }, []);
+
+  const totalOrderPrice = lineItems.reduce((sum, item) => sum + item.price, 0);
+
   return (
     <Box display="flex" flexDirection="column" minHeight="100%">
       <LegacyCard>
@@ -89,9 +130,9 @@ export default function OrderCard() {
               </LegacyStack>
             </LegacyStack.Item>
             <LegacyStack.Item fill>
-              <Box>
+              <Box >
                 <Text variant="bodyMd" fontWeight="semibold" as="p">
-                  $25.00
+                  ${totalOrderPrice.toFixed(2)}
                 </Text>
               </Box>
             </LegacyStack.Item>
@@ -114,7 +155,7 @@ export default function OrderCard() {
           >
             {lineItems.map((item, index) => (
               <React.Fragment key={item.id}>
-                <LegacyStack alignment="center" wrap={false}>
+                <LegacyStack alignment="center" wrap={false} spacing="loose"> {/* Added spacing for delete button */}
                   <LegacyStack.Item>
                     <LegacyStack alignment="center" spacing="baseTight" wrap={false}>
                       <Thumbnail source={item.imageUrl} alt={item.name} size="medium" />
@@ -133,9 +174,18 @@ export default function OrderCard() {
                   <LegacyStack.Item fill>
                     <LegacyStack alignment="center" spacing="tight" wrap={false}>
                       <LegacyStack.Item>
-                        <Text variant="bodyMd" as="p">
-                          x{item.quantity}
-                        </Text>
+                        <Box width="80px"> {/* Constrain width of TextField container */}
+                          <TextField
+                            label={`Quantity for ${item.name}`}
+                            labelHidden
+                            type="text"
+                            value={item.quantity.toString()}
+                            onChange={(value) => handleQuantityChange(item.id, value)}
+                            autoComplete="off"
+                            prefix="x"
+                            inputMode="numeric"
+                          />
+                        </Box>
                       </LegacyStack.Item>
                       <LegacyStack.Item fill>
                         <Box >
@@ -146,6 +196,16 @@ export default function OrderCard() {
                       </LegacyStack.Item>
                     </LegacyStack>
                   </LegacyStack.Item>
+                  {/* Delete Button Item */}
+                  <LegacyStack.Item>
+                    <Button
+                      icon={XCircleIcon}
+                      onClick={() => handleDeleteItem(item.id)}
+                      accessibilityLabel={`Remove ${item.name}`}
+                      variant="plain"
+                      destructive // This makes the icon red
+                    />
+                  </LegacyStack.Item>
                 </LegacyStack>
                 {index < lineItems.length - 1 && (
                   <Box paddingBlockStart="400" paddingBlockEnd="400">
@@ -155,7 +215,7 @@ export default function OrderCard() {
               </React.Fragment>
             ))}
             {lineItems.length === 0 && (
-              <Box >
+              <Box padding="400"> {/* Added padding and centering */}
                 <Text as="p" tone="subdued">
                   No items in this order.
                 </Text>
@@ -168,10 +228,17 @@ export default function OrderCard() {
         <LegacyCard.Section>
           <LegacyStack distribution="trailing">
             <ButtonGroup>
-              <Button onClick={() => console.log('Update orders clicked')}>
+              <Button
+                onClick={() => console.log('Update orders clicked. Current items:', lineItems)}
+                disabled={lineItems.length === 0} // Disable if no items
+              >
                 Update orders
               </Button>
-              <Button variant="primary" disabled icon={PlusIcon}>
+              <Button
+                variant="primary"
+                disabled={lineItems.length === 0 || totalOrderPrice === 0} // Disable if no items or total is 0
+                icon={PlusIcon}
+              >
                 Create order
               </Button>
             </ButtonGroup>
