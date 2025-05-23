@@ -1,5 +1,5 @@
 // src/components/ProductIndexTable.tsx
-import React, { useState } from "react";
+import React, { useState } from "react"; // Removed unused useRef, useEffect
 import {
   IndexTable,
   IndexFilters,
@@ -15,12 +15,13 @@ const ProductIndexTable = () => {
   const [queryValue, setQueryValue] = useState("");
 
   const orders = [
-    { id: "p1", product: "T-Shirt", category: "Clothing", status: <Badge tone="success">Converted</Badge> },
-    { id: "p2", product: "Sticker", category: "Merch", status: <Badge tone="attention">Not Converted</Badge> },
-    { id: "p3", product: "Hoodie", category: "Clothing", status: <Badge tone="success">Converted</Badge> },
-    { id: "p4", product: "Cap", category: "Clothing", status: <Badge tone="attention">Not Converted</Badge> },
-    { id: "p5", product: "Shorts", category: "Clothing", status: <Badge progress="incomplete" tone="info">In process</Badge> },
+    { id: "p1", product: "Blanks t-shirt", category: "T-shirt", status: <Badge tone="success">Converted</Badge> },
+    { id: "p2", product: "Blanks hoodie", category: "Hoodie", status: <Badge tone="attention">Not Converted</Badge> },
+    { id: "p3", product: "Blanks cap", category: "Cap", status: <Badge tone="success">Converted</Badge> },
+    { id: "p4", product: "Blanks 5 panel cap", category: "Cap", status: <Badge tone="attention">Not Converted</Badge> },
+    { id: "p5", product: "Blanks performance shorts", category: "Shorts", status: <Badge progress="incomplete" tone="info">In process</Badge> },
   ];
+
 
   const resourceName = { singular: "product", plural: "products" };
 
@@ -40,20 +41,24 @@ const ProductIndexTable = () => {
   return (
     <div style={{ height: "100%" }}>
       <LegacyCard>
+        {/* Flex container to manage layout: Filters at top, scrollable Table below */}
         <div
           style={{
-            maxHeight: 400,
-            overflowY: "auto",
-            width: "100%",
-            position: "relative",
+            display: "flex",
+            flexDirection: "column",
+            maxHeight: 400, // Max height for the entire filters + table section
+            width: "100%", // Ensure it takes full width of LegacyCard
           }}
         >
+          {/* Container for IndexFilters. This part will not scroll. */}
           <div
             style={{
-              position: "sticky",
-              top: 0,
-              zIndex: 1,
+              // The original sticky wrapper had a background. Retain it for visual consistency and separation.
               background: "var(--p-color-bg-surface)",
+              // If IndexFilters doesn't provide its own border/shadow when not in its internal sticky state,
+              // you might consider adding a borderBottom here for better visual separation from the table.
+              // e.g., borderBottom: "1px solid var(--p-color-border)",
+              // For now, relying on the background color should be sufficient.
             }}
           >
             <IndexFilters
@@ -79,24 +84,36 @@ const ProductIndexTable = () => {
               filters={[]}
               appliedFilters={[]}
               onClearAll={() => {}}
-              disableStickyMode
+              disableStickyMode // Correct: IndexFilters internal stickiness is disabled.
+                                // It's positioned by the flex layout, not its internal sticky logic.
               mode={mode}
               setMode={setMode}
             />
           </div>
-          <IndexTable
-            resourceName={resourceName}
-            itemCount={orders.length}
-            headings={[
-              { title: "Product" },
-              { title: "Category" },
-              // Change alignment to 'center' for the "Status" column
-              { title: "Status", alignment: "center" },
-            ]}
-            // selectable={false} // This prop is not standard and should be removed
+
+          {/* Scrollable container for IndexTable */}
+          <div
+            style={{
+              flex: 1, // Allows this div to take up the remaining vertical space
+              overflowY: "auto", // Makes this div scrollable if IndexTable content overflows
+              // width: "100%", // Not strictly necessary; flex items stretch by default or take content width.
+                                // Parent div width: "100%" already ensures overall width.
+            }}
           >
-            {rowMarkup}
-          </IndexTable>
+            <IndexTable
+              resourceName={resourceName}
+              itemCount={orders.length}
+              headings={[
+                { title: "Product" },
+                { title: "Category" },
+                // Change alignment to 'center' for the "Status" column
+                { title: "Status", alignment: "center" },
+              ]}
+              selectable={false} // If you don't want checkboxes on rows, set this to false. Default is true.
+            >
+              {rowMarkup}
+            </IndexTable>
+          </div>
         </div>
       </LegacyCard>
     </div>

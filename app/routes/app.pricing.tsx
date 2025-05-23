@@ -12,6 +12,7 @@ import {
   Link,
   Icon,
   Badge,
+  Banner,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { CheckIcon } from "@shopify/polaris-icons";
@@ -37,7 +38,7 @@ export default function PricingPage() {
                   Number of monthly visitors
                 </Text>
                 <Text variant="bodyLg" as="p" fontWeight="medium">
-                  100,000{" "}
+                  10,000{" "}
                   <Text as="span" tone="subdued">
                     unique visitors / 30 days
                   </Text>
@@ -47,16 +48,30 @@ export default function PricingPage() {
                 </Text>
                 <Box
                   background="bg-surface-secondary"
-                  padding="200"
+                  
                   borderRadius="200"
                   borderColor="border"
                   borderWidth="050"
+                  paddingBlockStart="200"
+                  paddingBlockEnd="200"
                 >
                   <Text tone="subdued" as="h4">
                     You've had 0 unique visitors in the last day (equivalent to
                     0 over 30 days).
                   </Text>
                 </Box>
+                <Banner tone="warning" onDismiss={() => {}}>
+                  <p>
+                    You have reached your free limit of stickers.{" "}
+                    <Link url="">Please choose a plan to continue.</Link>
+                  </p>
+                </Banner>
+                <Banner tone="warning" onDismiss={() => {}}>
+                  <p>
+                    You have reached your free limit of 3D conversions.{" "}
+                    <Link url="">Please choose a plan to continue.</Link>
+                  </p>
+                </Banner>
               </BlockStack>
             </Box>
 

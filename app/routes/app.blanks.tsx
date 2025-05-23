@@ -82,6 +82,9 @@ export default function BlanksPage() {
               { content: "Hoodies", onAction: () => handleCategory("Hoodies") },
               { content: "Shorts", onAction: () => handleCategory("Shorts") },
               { content: "Hats", onAction: () => handleCategory("Hats") },
+              { content: "Sweatshirts", onAction: () => handleCategory("Sweatshirts") },
+              { content: "Jackets", onAction: () => handleCategory("Jackets") },
+              { content: "T-shirts", onAction: () => handleCategory("T-shirts") },
             ],
           },
         ]}

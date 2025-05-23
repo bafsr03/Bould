@@ -15,10 +15,10 @@ import React, { useState, useCallback } from "react";
 const allProducts = [
   {
     id: "1",
-    name: "Hoodie",
+    name: " Blanks Hoodie",
     image:
       "https://cdn.shopify.com/s/files/1/0757/9955/files/Drawer.png",
-    materials: ["Teak", "Natural"],
+    materials: ["French terry", "Cotton", "Polyester"],
     converted: true,
     status: "active",
   },
@@ -36,16 +36,16 @@ const allProducts = [
     name: "T-shirt",
     image:
       "https://cdn.shopify.com/s/files/1/0757/9955/files/Table.png",
-    materials: ["Teak"],
+    materials: ["Cotton pima 100%"],
     converted: true,
     status: "draft",
   },
     {
     id: "4",
-    name: "Cap",
+    name: "Blanks Cap",
     image:
       "https://cdn.shopify.com/s/files/1/0757/9955/files/Table.png",
-    materials: ["Teak"],
+    materials: ["Corduroy", "Cotton"],
     converted: false,
     status: "draft",
   },

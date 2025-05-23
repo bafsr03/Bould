@@ -19,9 +19,13 @@ export default function ControlsPanel() {
   const [colors, setColors] = useState<string[]>([]);
 
   const categoryOptions = [
-    { label: "Hat", value: "hat" },
+    { label: "Cap", value: "cap" },
     { label: "T-Shirt", value: "tshirt" },
     { label: "Pants", value: "pants" },
+    { label: "Hoodies", value: "hoodies" },
+    { label: "Shorts", value: "shorts" },
+    { label: "Sweatshirts", value: "sweatshirts" },
+    { label: "Jackets", value: "jackets" },
   ];
 
   const sizeOptions = [

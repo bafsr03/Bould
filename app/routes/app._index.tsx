@@ -1,24 +1,39 @@
-import { useEffect } from "react";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { useFetcher } from "@remix-run/react";
+import React from 'react';
 import {
   Page,
-  Layout,
   Text,
   Card,
   Button,
   BlockStack,
   Box,
-  List,
   Link,
   InlineStack,
+  Banner,
+  Select,
+  Icon,
+  Badge,
+  InlineGrid,
+  ButtonGroup,
+  Layout,
 } from "@shopify/polaris";
-import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
+import {
+  CalendarIcon,
+  PlayCircleIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChatIcon,
+  EnvelopeSoftPackIcon,
+} from "@shopify/polaris-icons";
+import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
+
+export const meta: MetaFunction = () => ([
+  { title: "Welcome to Bould | Pioneering the Future of Online Shopping" },
+  { name: "description", content: "Convert 2D designs into interactive 3D product renders, preview blank apparel, and generate custom stickers with printed samples,  all in our Shopify app." }
+]);
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
-
   return null;
 };
 
@@ -31,303 +46,339 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     `#graphql
       mutation populateProduct($product: ProductCreateInput!) {
         productCreate(product: $product) {
-          product {
-            id
-            title
-            handle
-            status
-            variants(first: 10) {
-              edges {
-                node {
-                  id
-                  price
-                  barcode
-                  createdAt
-                }
-              }
-            }
-          }
+          product { id, title, handle, status }
         }
       }`,
-    {
-      variables: {
-        product: {
-          title: `${color} Snowboard`,
-        },
-      },
-    },
+    { variables: { product: { title: `${color} Snowboard` } } }
   );
   const responseJson = await response.json();
-
-  const product = responseJson.data!.productCreate!.product!;
-  const variantId = product.variants.edges[0]!.node!.id!;
-
-  const variantResponse = await admin.graphql(
-    `#graphql
-    mutation shopifyRemixTemplateUpdateVariant($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-      productVariantsBulkUpdate(productId: $productId, variants: $variants) {
-        productVariants {
-          id
-          price
-          barcode
-          createdAt
-        }
-      }
-    }`,
-    {
-      variables: {
-        productId: product.id,
-        variants: [{ id: variantId, price: "100.00" }],
-      },
-    },
-  );
-
-  const variantResponseJson = await variantResponse.json();
-
-  return {
-    product: responseJson!.data!.productCreate!.product,
-    variant:
-      variantResponseJson!.data!.productVariantsBulkUpdate!.productVariants,
-  };
+  return { product: responseJson.data!.productCreate!.product };
 };
 
 export default function Index() {
-  const fetcher = useFetcher<typeof action>();
-
-  const shopify = useAppBridge();
-  const isLoading =
-    ["loading", "submitting"].includes(fetcher.state) &&
-    fetcher.formMethod === "POST";
-  const productId = fetcher.data?.product?.id.replace(
-    "gid://shopify/Product/",
-    "",
-  );
-
-  useEffect(() => {
-    if (productId) {
-      shopify.toast.show("Product created");
-    }
-  }, [productId, shopify]);
-  const generateProduct = () => fetcher.submit({}, { method: "POST" });
+  const handleDismiss = () => console.log("Banner dismissed");
+  const handleSelectChange = (value: string) => console.log("Select changed to:", value);
 
   return (
     <Page>
-      <TitleBar title="Bould">
-        <button variant="primary" onClick={generateProduct}>
-          Generate a product
-        </button>
-      </TitleBar>
       <BlockStack gap="500">
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="500">
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    Congrats on creating a new Shopify app 🎉
-                  </Text>
-                  <Text variant="bodyMd" as="p">
-                    This embedded app template uses{" "}
-                    <Link
-                      url="https://shopify.dev/docs/apps/tools/app-bridge"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      App Bridge
-                    </Link>{" "}
-                    interface examples like an{" "}
-                    <Link url="/app/additional" removeUnderline>
-                      additional page in the app nav
-                    </Link>
-                    , as well as an{" "}
-                    <Link
-                      url="https://shopify.dev/docs/api/admin-graphql"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      Admin GraphQL
-                    </Link>{" "}
-                    mutation demo, to provide a starting point for app
-                    development.
-                  </Text>
-                </BlockStack>
-                <BlockStack gap="200">
-                  <Text as="h3" variant="headingMd">
-                    Get started with products
-                  </Text>
-                  <Text as="p" variant="bodyMd">
-                    Generate a product with GraphQL and get the JSON output for
-                    that product. Learn more about the{" "}
-                    <Link
-                      url="https://shopify.dev/docs/api/admin-graphql/latest/mutations/productCreate"
-                      target="_blank"
-                      removeUnderline
-                    >
-                      productCreate
-                    </Link>{" "}
-                    mutation in our API references.
-                  </Text>
-                </BlockStack>
-                <InlineStack gap="300">
-                  <Button loading={isLoading} onClick={generateProduct}>
-                    Generate a product
-                  </Button>
-                  {fetcher.data?.product && (
-                    <Button
-                      url={`shopify:admin/products/${productId}`}
-                      target="_blank"
-                      variant="plain"
-                    >
-                      View product
-                    </Button>
-                  )}
-                </InlineStack>
-                {fetcher.data?.product && (
-                  <>
-                    <Text as="h3" variant="headingMd">
-                      {" "}
-                      productCreate mutation
-                    </Text>
-                    <Box
-                      padding="400"
-                      background="bg-surface-active"
-                      borderWidth="025"
-                      borderRadius="200"
-                      borderColor="border"
-                      overflowX="scroll"
-                    >
-                      <pre style={{ margin: 0 }}>
-                        <code>
-                          {JSON.stringify(fetcher.data.product, null, 2)}
-                        </code>
-                      </pre>
-                    </Box>
-                    <Text as="h3" variant="headingMd">
-                      {" "}
-                      productVariantsBulkUpdate mutation
-                    </Text>
-                    <Box
-                      padding="400"
-                      background="bg-surface-active"
-                      borderWidth="025"
-                      borderRadius="200"
-                      borderColor="border"
-                      overflowX="scroll"
-                    >
-                      <pre style={{ margin: 0 }}>
-                        <code>
-                          {JSON.stringify(fetcher.data.variant, null, 2)}
-                        </code>
-                      </pre>
-                    </Box>
-                  </>
-                )}
+        {/* Section 1 */}
+        <Box paddingBlockEnd="100">
+          <InlineStack gap="200" blockAlign="center" wrap={false}>
+            <Text variant="headingXl" as="h1">
+             Welcome to Bould | Pioneering the Future of Online Shopping
+            </Text>
+            <Badge tone="success">FREE plan</Badge>
+          </InlineStack>
+        </Box>
+
+        {/* Section 2 */}
+        <Banner onDismiss={handleDismiss}>
+          <Text as="p">
+            "We're in beta testing now. Share your live feedback today!"{" "}
+            <Link url="#">Contact us</Link>.
+          </Text>
+        </Banner>
+
+        {/* Section 3 */}
+        <InlineGrid columns={{ xs: 1, sm: 2, md: 3 }} gap="400">
+          <Card>
+            <BlockStack gap="300">
+              <Box padding="200">
+                <img
+                  src="https://i.imgur.com/mgM7N5U.png"
+                  alt="2D to 3D product converter icon"
+                  style={{
+                    width: "80px",
+                    height: "80px",
+                    borderRadius: "16px",
+                    objectFit: "cover",
+                    display: "block",
+                    margin: "0 auto",
+                  }}
+                />
+              </Box>
+              <Text variant="headingMd" as="h3">
+                2D-3D Converter App
+              </Text>
+              <Text as="p" tone="subdued">
+                Upload your designs to create interactive 3D renders, ready for customers to view.
+              </Text>
+              <Button fullWidth variant="primary">
+                Start 3D Conversion
+              </Button>
+            </BlockStack>
+          </Card>
+
+          <Card>
+            <BlockStack gap="300">
+              <Box padding="200">
+                <img
+                  src="https://i.imgur.com/niDGK6u.png"
+                  alt="Blank apparel preview tool icon"
+                  style={{
+                    width: "80px",
+                    height: "80px",
+                    borderRadius: "16px",
+                    objectFit: "cover",
+                    display: "block",
+                    margin: "0 auto",
+                  }}
+                />
+              </Box>
+              <Text variant="headingMd" as="h3">
+                Blank Apparel Preview
+              </Text>
+              <Text as="p" tone="subdued">
+                Preview and customize blank apparel designs with Beta samples.
+              </Text>
+              <Button fullWidth variant="primary">
+                Customize Blanks
+              </Button>
+            </BlockStack>
+          </Card>
+
+          <Card>
+            <BlockStack gap="300">
+              <Box padding="200">
+                <img
+                  src="https://i.imgur.com/UqXBfig.png"
+                  alt="Sticker maker and printer icon"
+                  style={{
+                    width: "80px",
+                    height: "80px",
+                    borderRadius: "16px",
+                    objectFit: "cover",
+                    display: "block",
+                    margin: "0 auto",
+                  }}
+                />
+              </Box>
+              <Text variant="headingMd" as="h3">
+                Sticker Maker & Printer
+              </Text>
+              <Text as="p" tone="subdued">
+                Design custom stickers and receive printed samples in Beta.
+              </Text>
+              <Button fullWidth variant="primary">
+                Create Stickers
+              </Button>
+            </BlockStack>
+          </Card>
+        </InlineGrid>
+
+        {/* Section 4 */}
+        <Box paddingBlockStart="200" paddingBlockEnd="200">
+          <InlineStack align="space-between" blockAlign="center" gap="400">
+            <InlineStack gap="200" blockAlign="center">
+              <Text as="p">Choose app language:</Text>
+              <Select
+                label="Select app language"
+                labelHidden
+                options={[{ label: "English", value: "en" }]}
+                value="en"
+                onChange={handleSelectChange}
+              />
+            </InlineStack>
+            <Button icon={CalendarIcon}>Past 7 days</Button>
+          </InlineStack>
+        </Box>
+
+ 
+        {/* Section 5: Usage Summary */}
+        <Card>
+          <Box padding="600">
+            <InlineStack align="center" gap="400">
+              <BlockStack gap="100" inlineAlign="center">
+          <Text as="p" tone="subdued">3D Renders Created</Text>
+          <Text variant="headingLg" as="h2">0</Text>
               </BlockStack>
-            </Card>
-          </Layout.Section>
-          <Layout.Section variant="oneThird">
-            <BlockStack gap="500">
+              <BlockStack gap="100" inlineAlign="center">
+          <Text as="p" tone="subdued">Apparel Previews</Text>
+          <Text variant="headingLg" as="h2">0</Text>
+              </BlockStack>
+              <BlockStack gap="100" inlineAlign="center">
+          <Text as="p" tone="subdued">Stickers Generated</Text>
+          <Text variant="headingLg" as="h2">0</Text>
+              </BlockStack>
+            </InlineStack>
+          </Box>
+        </Card>
+
+        {/* Section 6: Plan Quota */}
+        <Card>
+          <BlockStack gap="300">
+            <Text variant="headingMd" as="h3">Plan Quota</Text>
+            <BlockStack gap="100">
+              <Text as="p" fontWeight="medium">3D Conversions Remaining</Text>
+              <Text as="p" tone="subdued">0/5 this month</Text>
+            </BlockStack>
+            <BlockStack gap="100">
+              <Text as="p" fontWeight="medium">Sticker generations Remaining</Text>
+              <Text as="p" tone="subdued">0/25 this month</Text>
+            </BlockStack>
+          </BlockStack>
+        </Card>
+
+
+        {/* Section 7 */}
+        <BlockStack gap="300">
+          <Text variant="headingMd" as="h2">
+            Quick tutorials
+          </Text>
+          <Layout>
+            <Layout.Section>
               <Card>
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    App template specs
-                  </Text>
-                  <BlockStack gap="200">
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Framework
-                      </Text>
-                      <Link
-                        url="https://remix.run"
-                        target="_blank"
-                        removeUnderline
+                <InlineStack gap="300" blockAlign="center" wrap={false}>
+                  <Box
+                    background="bg-surface-secondary"
+                    minWidth="80px"
+                    minHeight="60px"
+                    borderRadius="200"
+                  >
+                    <Icon
+                      source={PlayCircleIcon}
+                      tone="base"
+                      accessibilityLabel="Tutorial video"
+                    />
+                  </Box>
+                  <BlockStack gap="150">
+                    <Text as="p" fontWeight="semibold">
+                      How to convert my products to 3D?
+                    </Text>
+                    <Text as="p" tone="subdued">
+                      Configure your products in our converter page, by uploading your product images and stock.
+                    </Text>
+                    <InlineStack gap="200" wrap={false}>
+                      <Button
+                        icon={PlayCircleIcon}
+                        variant="plain"
+                        accessibilityLabel="Watch video"
                       >
-                        Remix
-                      </Link>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Database
-                      </Text>
-                      <Link
-                        url="https://www.prisma.io/"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        Prisma
-                      </Link>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        Interface
-                      </Text>
-                      <span>
-                        <Link
-                          url="https://polaris.shopify.com"
-                          target="_blank"
-                          removeUnderline
-                        >
-                          Polaris
-                        </Link>
-                        {", "}
-                        <Link
-                          url="https://shopify.dev/docs/apps/tools/app-bridge"
-                          target="_blank"
-                          removeUnderline
-                        >
-                          App Bridge
-                        </Link>
-                      </span>
-                    </InlineStack>
-                    <InlineStack align="space-between">
-                      <Text as="span" variant="bodyMd">
-                        API
-                      </Text>
-                      <Link
-                        url="https://shopify.dev/docs/api/admin-graphql"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        GraphQL API
+                        Watch video
+                      </Button>
+                      <Link url="#" removeUnderline>
+                        Read instruction
                       </Link>
                     </InlineStack>
                   </BlockStack>
-                </BlockStack>
+                </InlineStack>
               </Card>
+            </Layout.Section>
+            <Layout.Section>
               <Card>
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd">
-                    Next steps
-                  </Text>
-                  <List>
-                    <List.Item>
-                      Build an{" "}
-                      <Link
-                        url="https://shopify.dev/docs/apps/getting-started/build-app-example"
-                        target="_blank"
-                        removeUnderline
+                <InlineStack gap="300" blockAlign="center" wrap={false}>
+                  <Box
+                    background="bg-surface-secondary"
+                    minWidth="80px"
+                    minHeight="60px"
+                    borderRadius="200"
+                  >
+                    <Icon
+                      source={CalendarIcon}
+                      tone="base"
+                      accessibilityLabel="Preview tutorial"
+                    />
+                  </Box>
+                  <BlockStack gap="150">
+                    <Text as="p" fontWeight="semibold">
+                      How to preview my product designs live in-store?
+                    </Text>
+                    <Text as="p" tone="subdued">
+                      Highlight your apparel options and review fits with try-on feature.
+                    </Text>
+                    <InlineStack gap="200" wrap={false}>
+                      <Button
+                        icon={PlayCircleIcon}
+                        variant="plain"
+                        accessibilityLabel="Watch video"
                       >
-                        {" "}
-                        example app
-                      </Link>{" "}
-                      to get started
-                    </List.Item>
-                    <List.Item>
-                      Explore Shopify’s API with{" "}
-                      <Link
-                        url="https://shopify.dev/docs/apps/tools/graphiql-admin-api"
-                        target="_blank"
-                        removeUnderline
-                      >
-                        GraphiQL
+                        Watch video
+                      </Button>
+                      <Link url="#" removeUnderline>
+                        Read instruction
                       </Link>
-                    </List.Item>
-                  </List>
-                </BlockStack>
+                    </InlineStack>
+                  </BlockStack>
+                </InlineStack>
               </Card>
-            </BlockStack>
-          </Layout.Section>
-        </Layout>
+            </Layout.Section>
+          </Layout>
+          <InlineStack align="center">
+            <ButtonGroup>
+              <Button icon={ChevronLeftIcon} accessibilityLabel="Previous tutorial" />
+              <Box paddingInlineStart="150" paddingInlineEnd="150">
+                <Text as="p">1/1</Text>
+              </Box>
+              <Button icon={ChevronRightIcon} accessibilityLabel="Next tutorial" />
+            </ButtonGroup>
+          </InlineStack>
+        </BlockStack>
+
+        {/* Section 8 */}
+        <BlockStack gap="300">
+          <Text variant="headingMd" as="h2">
+            Need any help?
+          </Text>
+          <InlineGrid columns={{ xs: 1, sm: 2, md: 3 }} gap="400">
+            <Card>
+              <BlockStack gap="150" inlineAlign="center">
+                <Icon source={ChatIcon} tone="primary" />
+                <Link url="#" removeUnderline>
+                  <Text variant="headingSm" as="h4">
+                    Get email support
+                  </Text>
+                </Link>
+                <Text as="p" tone="subdued" alignment="center">
+                  Email us and we'll get back to you as soon as possible.
+                </Text>
+              </BlockStack>
+            </Card>
+            <Card>
+              <BlockStack gap="150" inlineAlign="center">
+                <Icon source={EnvelopeSoftPackIcon} tone="primary" />
+                <Link url="#" removeUnderline>
+                  <Text variant="headingSm" as="h4">
+                    Contact us
+                  </Text>
+                </Link>
+                <Text as="p" tone="subdued" alignment="center">
+                  Contact us to get help with your question.
+                </Text>
+              </BlockStack>
+            </Card>
+            <Card>
+              <BlockStack gap="150" inlineAlign="center">
+                <Icon source={EnvelopeSoftPackIcon} tone="primary" />
+                <Link url="#" removeUnderline>
+                  <Text variant="headingSm" as="h4">
+                    Help docs
+                  </Text>
+                </Link>
+                <Text as="p" tone="subdued" alignment="center">
+                  Find a solution for your problem with documents (coming soon)
+                </Text>
+              </BlockStack>
+            </Card>
+          </InlineGrid>
+        </BlockStack>
+
+        {/* Footer */}
+        <Box padding="1000">
+          <div style={{ textAlign: "center" }}>
+            <Text as="h4" tone="subdued">
+              Need help?{" "}
+              <Link url="mailto:jake@bouldhq.com" removeUnderline>
+                Chat with us.
+              </Link>
+            </Text>
+            <Box paddingBlockStart="100">
+              <Text as="h4" tone="subdued">
+                © 2025 Bould
+              </Text>
+            </Box>
+          </div>
+        </Box>
       </BlockStack>
     </Page>
   );
