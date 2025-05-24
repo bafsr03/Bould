@@ -3,7 +3,7 @@
 client_id = "b6d437a7d969cd77e40e9cb95583c5fd"
 name = "Bould"
 handle = "bould"
-application_url = "https://kentucky-precision-relatively-matters.trycloudflare.com"
+application_url = "https://automatically-coffee-career-philip.trycloudflare.com"
 embedded = true
 
 [build]
@@ -27,9 +27,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://kentucky-precision-relatively-matters.trycloudflare.com/auth/callback",
-  "https://kentucky-precision-relatively-matters.trycloudflare.com/auth/shopify/callback",
-  "https://kentucky-precision-relatively-matters.trycloudflare.com/api/auth/callback"
+  "https://automatically-coffee-career-philip.trycloudflare.com/auth/callback",
+  "https://automatically-coffee-career-philip.trycloudflare.com/auth/shopify/callback",
+  "https://automatically-coffee-career-philip.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]

@@ -1,4 +1,3 @@
-// app/components/ShinySticker.tsx
 import React, { useRef, useState, useEffect, CSSProperties } from 'react';
 import { Spinner } from '@shopify/polaris';
 

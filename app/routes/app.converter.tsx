@@ -60,7 +60,7 @@ export default function ConverterPage() {
         tone="info"
         onDismiss={() => {}}
       >
-        <p>We’re actively working on this feature. Stay tuned!</p>
+        <p>We're actively working on this feature. Stay tuned!</p>
       </Banner>
 
       <SkeletonPage primaryAction>

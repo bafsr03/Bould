@@ -16,7 +16,7 @@ import {
   CaretDownIcon,
 } from '@shopify/polaris-icons';
 
-// Helper component for consistent row layout (3-part) - UNCHANGED
+// Helper component for consistent row layout (3-part)
 type DetailRowProps = {
   left: React.ReactNode;
   middle?: React.ReactNode;
@@ -62,7 +62,7 @@ const DetailRow = ({
   </Box>
 );
 
-// Helper for simple two-column rows (unchanged) - UNCHANGED
+// Helper for simple two-column rows
 type TwoColumnRowProps = {
   left: React.ReactNode;
   rightText?: string;
@@ -99,16 +99,16 @@ export default function PaymentCard() {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <LegacyCard>
-        {/* top badge - this section will not grow */}
+        {/* top badge */}
         <Box padding="300">
           <Badge icon={PaymentIcon} tone="attention">
             Payment pending
           </Badge>
         </Box>
 
-      {/* detail rows - this section will grow to fill available space */}
+      {/* detail rows  */}
       <LegacyCard.Section subdued>
-        <div style={{ flexGrow: 1, overflowY: 'auto' /* For scroll if content overflows */ }}>
+        <div style={{ flexGrow: 1, overflowY: 'auto'}}>
           <DetailRow
             left="Original order • May 15 2023"
             right="$ 1,250.00"

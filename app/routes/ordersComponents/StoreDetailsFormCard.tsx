@@ -5,15 +5,26 @@ import {
   TextField,
   TextContainer,
   Text,
-  Box, // Using Box for spacing for consistency with Polaris components
+  Box,
 } from '@shopify/polaris';
-import React from 'react';
+
+import { useState } from 'react';
+type StoreDetailsFormState = {
+  storeName: string;
+  accountEmail: string;
+};
 
 export default function StoreDetailsFormCard() {
+
+const [ formState, setFormState ] = useState<StoreDetailsFormState>({
+  storeName: '',
+  accountEmail: '',
+});
+
+
   return (
     <Layout>
       <Layout.Section variant="oneThird">
-        {/* Replaced div with Box for consistent spacing */}
         <Box paddingBlockStart="400">
           <TextContainer>
             <Text id="storeDetails" variant="headingMd" as="h2">
@@ -31,13 +42,15 @@ export default function StoreDetailsFormCard() {
           <FormLayout>
             <TextField
               label="Store name or Name of the person who placed the order"
-              onChange={() => {}}
+              value={formState.storeName}
+              onChange={(value) => setFormState({ ...formState, storeName: value })}
               autoComplete="off"
             />
             <TextField
               type="email"
               label="Account email"
-              onChange={() => {}}
+              value={formState.accountEmail}
+              onChange={(value) => setFormState({ ...formState, accountEmail: value })}
               autoComplete="email"
             />
           </FormLayout>

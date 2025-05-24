@@ -1,5 +1,5 @@
-// src/components/DropZoneUploader.tsx
-import React, { useState, useCallback } from "react";
+
+import { useState, useCallback } from "react";
 import {
   DropZone,
   LegacyStack,

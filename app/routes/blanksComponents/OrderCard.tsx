@@ -17,7 +17,7 @@ import {
   AlertCircleIcon,
   InfoIcon,
   PlusIcon,
-  XCircleIcon, // Added XCircleIcon
+  XCircleIcon,
 } from '@shopify/polaris-icons';
 
 interface EditableLineItem {
@@ -151,11 +151,11 @@ export default function OrderCard() {
         <LegacyCard.Section>
           <Box
             padding="400"
-            style={{ flexGrow: 1, overflowY: 'auto', maxHeight: '10rem', minHeight: 0 }}
+            style={{ flexGrow: 1, overflowY: 'auto', maxHeight: '10rem', minHeight: 0 }} //What to f do with this style idk but its important.
           >
             {lineItems.map((item, index) => (
               <React.Fragment key={item.id}>
-                <LegacyStack alignment="center" wrap={false} spacing="loose"> {/* Added spacing for delete button */}
+                <LegacyStack alignment="center" wrap={false} spacing="loose">
                   <LegacyStack.Item>
                     <LegacyStack alignment="center" spacing="baseTight" wrap={false}>
                       <Thumbnail source={item.imageUrl} alt={item.name} size="medium" />
@@ -203,7 +203,7 @@ export default function OrderCard() {
                       onClick={() => handleDeleteItem(item.id)}
                       accessibilityLabel={`Remove ${item.name}`}
                       variant="plain"
-                      destructive // This makes the icon red
+                      tone="critical"
                     />
                   </LegacyStack.Item>
                 </LegacyStack>
@@ -230,13 +230,13 @@ export default function OrderCard() {
             <ButtonGroup>
               <Button
                 onClick={() => console.log('Update orders clicked. Current items:', lineItems)}
-                disabled={lineItems.length === 0} // Disable if no items
+                disabled={lineItems.length === 0}
               >
                 Update orders
               </Button>
               <Button
                 variant="primary"
-                disabled={lineItems.length === 0 || totalOrderPrice === 0} // Disable if no items or total is 0
+                disabled={lineItems.length === 0 || totalOrderPrice === 0}
                 icon={PlusIcon}
               >
                 Create order

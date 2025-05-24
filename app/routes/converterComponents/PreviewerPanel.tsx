@@ -1,5 +1,3 @@
-// src/components/Previewer.tsx
-import React from "react";
 import { Card, Text, Box, ButtonGroup, Button, InlineStack } from "@shopify/polaris";
 
 const Previewer = () => {

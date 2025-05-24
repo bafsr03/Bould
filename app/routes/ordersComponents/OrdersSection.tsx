@@ -111,8 +111,8 @@ export function OrderSection({ orders }: OrderSectionProps) {
     {label: 'Customer', value: 'customer desc', directionLabel: 'Z-A'},
     {label: 'Date', value: 'date asc', directionLabel: 'Oldest first'},
     {label: 'Date', value: 'date desc', directionLabel: 'Newest first'},
-    {label: 'Total', value: 'total asc', directionLabel: 'Low–high'},
-    {label: 'Total', value: 'total desc', directionLabel: 'High–low'},
+    {label: 'Total', value: 'total asc', directionLabel: 'Low-high'},
+    {label: 'Total', value: 'total desc', directionLabel: 'High-low'},
   ];
   const [sortSelected, setSortSelected] = useState<string[]>(['order asc']);
 

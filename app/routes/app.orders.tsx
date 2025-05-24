@@ -8,12 +8,12 @@ import {
   Box,
   Link,
 } from "@shopify/polaris";
-import OrdersCard from "./ordersComponents/PaymentCard"; // This is PaymentCard.tsx
+import OrdersCard from "./ordersComponents/PaymentCard"; 
 import type { Order } from "./ordersComponents/OrdersSection";
 import OrderSection from "./ordersComponents/OrdersSection";
-import StoreDetailsFormCard from "./ordersComponents/StoreDetailsFormCard"; // Import the new component
+import StoreDetailsFormCard from "./ordersComponents/StoreDetailsFormCard"; 
 
-// Sample orders for demo—swap in your real data
+// Sample orders for demo—swap
 const sampleOrders: Order[] = [
   {
     id: "001",
@@ -61,7 +61,7 @@ export default function BlanksPage() {
     <>
       {/* — Blanks header — */}
       <Page titleHidden>
-        <Box paddingBlockEnd="400"> {/* Added padding for spacing below heading */}
+        <Box paddingBlockEnd="400"> 
           <Text variant="headingXl" as="h1">
             Orders
           </Text>
@@ -77,10 +77,9 @@ export default function BlanksPage() {
         </Layout>
       </Page>
 
-      {/* Main content area wrapped in a Page for consistent padding */}
       <Page>
         <Layout>
-          {/* Orders table section (full width) */}
+          {/* Orders table section */}
           <Layout.Section>
             <OrderSection orders={sampleOrders} />
           </Layout.Section>
@@ -89,10 +88,10 @@ export default function BlanksPage() {
           <Layout.Section>
             <Grid>
               <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
-                <StoreDetailsFormCard /> {/* This is your StoreDetailsFormCard component */}
+                <StoreDetailsFormCard />
               </Grid.Cell>
               <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 6, lg: 6, xl: 6 }}>
-                <OrdersCard /> {/* This is your OrdersCard component */}
+                <OrdersCard />
               </Grid.Cell>
             </Grid>
           </Layout.Section>
@@ -100,7 +99,7 @@ export default function BlanksPage() {
       </Page>
 
       {/* Footer */}
-      <Box paddingBlockStart="1000" paddingBlockEnd="1000" paddingInlineStart="400" paddingInlineEnd="400"> {/* Adjusted padding for Page consistency */}
+      <Box paddingBlockStart="1000" paddingBlockEnd="1000" paddingInlineStart="400" paddingInlineEnd="400">
         <div style={{ textAlign: "center" }}>
           <Text as="h4" tone="subdued">
             Need help?{" "}

@@ -1,7 +1,5 @@
-
-// app/components/ImagePreview.tsx
 import { Box, Text } from '@shopify/polaris';
-import { ShinySticker }  from './ShinySticker'; // Ensure this path is correct
+import { ShinySticker }  from './ShinySticker';
 
 interface ImagePreviewProps {
   productImage: string;
@@ -40,8 +38,7 @@ export function ImagePreview({ productImage }: ImagePreviewProps) {
           <div style={{ maxWidth: '75%', maxHeight: '75%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <ShinySticker
               url="https://i.imgur.com/p5eOV3L.png"
-              rotate="0deg" // Default rotation, can be dynamic later
-              // width prop will default to 100% of this ^ div wrapper
+              rotate="0deg" 
             />
           </div>
         ) : (

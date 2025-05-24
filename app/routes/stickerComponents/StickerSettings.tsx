@@ -1,4 +1,3 @@
-// app/components/StickerSettings.tsx
 import React from 'react';
 import {
   Card,

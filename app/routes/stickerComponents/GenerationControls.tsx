@@ -17,7 +17,6 @@ import {
 } from '@shopify/polaris';
 import {NoteIcon} from '@shopify/polaris-icons';
 
-// DropZoneExample remains the same
 function DropZoneExample() {
   const [files, setFiles] = useState<File[]>([]);
 
@@ -108,12 +107,11 @@ export function GenerationControls({
     },
   ];
 
-  // Effect to update the height when the generator tab is visible or its content might change
+  // Effect to update the height when the generator tab is visible 
   useEffect(() => {
     if (selectedTabIndex === 0 && generatorContentRef.current) {
       const currentHeight = generatorContentRef.current.offsetHeight;
-      // Only update if the height is different and positive to avoid unnecessary re-renders
-      // or if it was 'auto' initially
+      //  update if the height is different and positive to avoid unnecessary re-renders
       if (currentHeight > 0 && myStickerTabMinHeight !== currentHeight) {
         setMyStickerTabMinHeight(currentHeight);
       }
@@ -132,7 +130,7 @@ export function GenerationControls({
     backgroundSize: '20px 20px',
     backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
     width: '100%',
-    minHeight: '250px', // This contributes to the generator's height
+    minHeight: '250px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -161,7 +159,7 @@ export function GenerationControls({
                     <div
                       style={{
                         display: 'inline-block',
-                        transform: `scale(${imageScale / 100})`, // Corrected template literal
+                        transform: `scale(${imageScale / 100})`, 
                         transition: 'transform 0.1s ease-out',
                       }}
                     >
@@ -173,7 +171,7 @@ export function GenerationControls({
                           maxWidth: unscaledImageMaxPreviewSize,
                           maxHeight: unscaledImageMaxPreviewSize,
                           objectFit: 'contain',
-                          padding: `${morphologyPadding}px`, // Corrected template literal
+                          padding: `${morphologyPadding}px`, 
                           boxSizing: 'border-box',
                           transition: 'padding 0.1s ease-out',
                         }}
@@ -183,7 +181,7 @@ export function GenerationControls({
                   <Box paddingBlockStart="200" />
                 </div>
 
-                {/* Background Description + New DropZone */}
+                {/* Background Description + DropZone */}
                 <div>
                   <Text variant="bodyMd" as="h3" fontWeight="semibold">
                     Background Description
@@ -222,8 +220,6 @@ export function GenerationControls({
                 minHeight: myStickerTabMinHeight,
                 display: 'flex',
                 flexDirection: 'column',
-                // If you want to vertically center the content of MySticker tab:
-                // justifyContent: 'center',
               }}
             >
               <BlockStack
@@ -242,9 +238,6 @@ export function GenerationControls({
                 <LegacyCard>
                   <SkeletonTabs fitted />
                 </LegacyCard>
-                {/* You might want a spacer or set justifyContent on the BlockStack */}
-                {/* For example, to push SkeletonTabs down if BlockStack is taller: */}
-                {/* <div style={{ marginTop: 'auto' }} />  // Pushes subsequent items down */}
               </BlockStack>
             </div>
           )}

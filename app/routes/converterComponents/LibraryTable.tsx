@@ -29,7 +29,7 @@ const allProducts = [
       "https://media.istockphoto.com/id/1368342833/photo/end-table-round-coffee-table-isolated-on-white.jpg?s=612x612&w=0&k=20&c=pOOmk6eyEfiv1x8toQkPWjDmTfBYJ9y5y2RTIaEBeGU=",
     materials: [""],
     converted: false,
-    status: "inactive", // <-- changed to inactive
+    status: "inactive",
   },
   {
     id: "3",
@@ -58,7 +58,7 @@ export default function LibraryTable() {
     { id: "all", content: "All" },
     { id: "active", content: "Active" },
     { id: "draft", content: "Draft" },
-    { id: "inactive", content: "Inactive" }, // <-- new tab
+    { id: "inactive", content: "Inactive" },
   ];
 
   const handleTabChange = useCallback((index: number) => {

@@ -1,12 +1,10 @@
-// src/components/ProductIndexTable.tsx
-import React, { useState } from "react"; // Removed unused useRef, useEffect
+import { useState } from "react";
 import {
   IndexTable,
   IndexFilters,
   LegacyCard,
   useSetIndexFiltersMode,
   Badge,
-  // Box, // Keep Box imported if you foresee needing it for fine-tuning
 } from "@shopify/polaris";
 
 const ProductIndexTable = () => {
@@ -33,7 +31,6 @@ const ProductIndexTable = () => {
     >
       <IndexTable.Cell>{product}</IndexTable.Cell>
       <IndexTable.Cell>{category}</IndexTable.Cell>
-      {/* The Badge component will now be centered within this cell due to heading alignment */}
       <IndexTable.Cell>{status}</IndexTable.Cell>
     </IndexTable.Row>
   ));
@@ -41,24 +38,19 @@ const ProductIndexTable = () => {
   return (
     <div style={{ height: "100%" }}>
       <LegacyCard>
-        {/* Flex container to manage layout: Filters at top, scrollable Table below */}
+        {/* Flex container to manage layout */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
-            maxHeight: 400, // Max height for the entire filters + table section
-            width: "100%", // Ensure it takes full width of LegacyCard
+            maxHeight: 400, 
+            width: "100%",
           }}
         >
-          {/* Container for IndexFilters. This part will not scroll. */}
+          {/* Container for IndexFilters. */}
           <div
             style={{
-              // The original sticky wrapper had a background. Retain it for visual consistency and separation.
               background: "var(--p-color-bg-surface)",
-              // If IndexFilters doesn't provide its own border/shadow when not in its internal sticky state,
-              // you might consider adding a borderBottom here for better visual separation from the table.
-              // e.g., borderBottom: "1px solid var(--p-color-border)",
-              // For now, relying on the background color should be sufficient.
             }}
           >
             <IndexFilters
@@ -84,8 +76,7 @@ const ProductIndexTable = () => {
               filters={[]}
               appliedFilters={[]}
               onClearAll={() => {}}
-              disableStickyMode // Correct: IndexFilters internal stickiness is disabled.
-                                // It's positioned by the flex layout, not its internal sticky logic.
+              disableStickyMode 
               mode={mode}
               setMode={setMode}
             />
@@ -94,10 +85,8 @@ const ProductIndexTable = () => {
           {/* Scrollable container for IndexTable */}
           <div
             style={{
-              flex: 1, // Allows this div to take up the remaining vertical space
-              overflowY: "auto", // Makes this div scrollable if IndexTable content overflows
-              // width: "100%", // Not strictly necessary; flex items stretch by default or take content width.
-                                // Parent div width: "100%" already ensures overall width.
+              flex: 1,
+              overflowY: "auto", 
             }}
           >
             <IndexTable
@@ -106,10 +95,10 @@ const ProductIndexTable = () => {
               headings={[
                 { title: "Product" },
                 { title: "Category" },
-                // Change alignment to 'center' for the "Status" column
+               
                 { title: "Status", alignment: "center" },
               ]}
-              selectable={false} // If you don't want checkboxes on rows, set this to false. Default is true.
+              selectable={false}
             >
               {rowMarkup}
             </IndexTable>

@@ -1,20 +1,17 @@
-// src/categoryData.ts (or wherever you place it)
+import React from 'react'; 
+import { Badge } from '@shopify/polaris';
 
-import React from 'react'; // Needed for JSX if you use components like Badge in titleMetadata
-import { Badge } from '@shopify/polaris'; // Only if you use Badge or other Polaris components directly in this data
 
-// Define a type for individual category data
 export interface CategoryDetails {
   title: string;
   subtitle: string;
   titleMetadata?: React.ReactNode;
   images: string[];
-  // You could add more category-specific fields here, like:
-  // skuPrefix?: string;
-  // availableSizes?: string[];
 }
 
-// Define the main data structure for all categories
+
+/* Defines the main data structure for all categories */
+
 export const categoriesData: Record<string, CategoryDetails> = {
   "Shirts": {
     title: "Bould Blanks - Short Sleeve Shirt",

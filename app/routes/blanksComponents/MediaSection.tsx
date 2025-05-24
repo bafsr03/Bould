@@ -1,4 +1,3 @@
-import React from 'react';
 import { LegacyCard, Box, InlineGrid, Button, LegacyStack } from '@shopify/polaris';
 
 interface MediaSectionProps {

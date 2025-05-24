@@ -1,5 +1,4 @@
-// app/components/InitialStickerGeneration.tsx
-import { useState, useCallback, useRef } from 'react'; // Added useRef
+import { useState, useCallback, useRef } from "react"; // Added useRef
 import {
   Card,
   BlockStack,
@@ -9,35 +8,39 @@ import {
   TextField,
   Box,
   Thumbnail,
-} from '@shopify/polaris';
-import { ProductIcon, UploadIcon } from '@shopify/polaris-icons';
-import { ShinySticker } from './ShinySticker'; // Import ShinySticker component
+} from "@shopify/polaris";
+import { ProductIcon, UploadIcon } from "@shopify/polaris-icons";
+import { ShinySticker } from "./ShinySticker";
 
-// Placeholder image URL for "Select a product" demonstration
-const DEFAULT_PRODUCT_IMAGE_UPLOADED = 'https://burst.shopifycdn.com/photos/orange-leather-cap-with-white-letter-c.jpg?width=373&format=pjpg&exif=0&iptc=0';
+// Placeholder "Select a product" demonstration
+const DEFAULT_PRODUCT_IMAGE_UPLOADED =
+  "https://burst.shopifycdn.com/photos/orange-leather-cap-with-white-letter-c.jpg?width=373&format=pjpg&exif=0&iptc=0";
 
 interface InitialStickerGenerationProps {
   onGenerate: (image: string, prompt: string) => void;
 }
 
-export function InitialStickerGeneration({ onGenerate }: InitialStickerGenerationProps) {
-  const [stickerPrompt, setStickerPrompt] = useState('');
+export function InitialStickerGeneration({
+  onGenerate,
+}: InitialStickerGenerationProps) {
+  const [stickerPrompt, setStickerPrompt] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null); // Ref for the hidden file input
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handlePromptChange = useCallback((value: string) => setStickerPrompt(value), []);
+  const handlePromptChange = useCallback(
+    (value: string) => setStickerPrompt(value),
+    [],
+  );
 
-  // This function is for the "Select a product" button
+  /* Selection Logic  */
   const handleSelectProductClick = () => {
     setSelectedImage(DEFAULT_PRODUCT_IMAGE_UPLOADED);
   };
 
-  // This function is called when the "Upload image" button is clicked
   const handleUploadImageButtonClick = () => {
-    fileInputRef.current?.click(); // Programmatically click the hidden file input
+    fileInputRef.current?.click();
   };
 
-  // This function is called when a file is selected via the file input
   const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -47,29 +50,26 @@ export function InitialStickerGeneration({ onGenerate }: InitialStickerGeneratio
       };
       reader.onerror = () => {
         console.error("Error reading file.");
-        // Optionally, inform the user about the error
         alert("There was an error uploading your image. Please try again.");
         setSelectedImage(null);
-      }
+      };
       reader.readAsDataURL(file);
     } else {
-      // If no file is selected (e.g., user cancels the dialog), clear any existing selection
-      // or keep the previous one, depending on desired behavior. Here we clear it.
-      // setSelectedImage(null); // Or do nothing to keep previous if one existed
+      setSelectedImage(null);
     }
     // Reset the file input's value to allow selecting the same file again
     if (event.target) {
-      event.target.value = '';
+      event.target.value = "";
     }
   };
 
   const handleGenerateClick = () => {
     if (!selectedImage) {
-      alert('Please select or upload an image first.');
+      alert("Please select or upload an image first.");
       return;
     }
     if (!stickerPrompt.trim()) {
-      alert('Please enter a description for your background.');
+      alert("Please enter a description for your background.");
       return;
     }
     onGenerate(selectedImage, stickerPrompt);
@@ -77,7 +77,9 @@ export function InitialStickerGeneration({ onGenerate }: InitialStickerGeneratio
 
   return (
     <Card>
-      <Box padding="600"> {/* Added padding for inner content */}
+      <Box padding="600">
+        {" "}
+        {/* Added padding for inner content */}
         <BlockStack gap="500" inlineAlign="center">
           <ShinySticker
             url="https://i.imgur.com/XDIVOSU.png"
@@ -88,15 +90,16 @@ export function InitialStickerGeneration({ onGenerate }: InitialStickerGeneratio
             Start generating
           </Text>
           <Text variant="bodyMd" as="p" tone="subdued" alignment="center">
-            Upload a product image or select one from your catalog to generate AI-designed backgrounds.
+            Upload a product image or select one from your catalog to generate
+            AI-designed backgrounds.
           </Text>
 
-          {/* Hidden file input, triggered by the "Upload image" button */}
+          {/* Hidden file input */}
           <input
             type="file"
             ref={fileInputRef}
-            style={{ display: 'none' }}
-            accept="image/*" // Restrict to image files (e.g., image/png, image/jpeg)
+            style={{ display: "none" }}
+            accept="image/*"
             onChange={handleFileSelected}
           />
 
@@ -104,16 +107,26 @@ export function InitialStickerGeneration({ onGenerate }: InitialStickerGeneratio
             <Button onClick={handleUploadImageButtonClick} icon={UploadIcon}>
               Upload image
             </Button>
-            <Button onClick={handleSelectProductClick} icon={ProductIcon} variant="secondary">
+            <Button
+              onClick={handleSelectProductClick}
+              icon={ProductIcon}
+              variant="secondary"
+            >
               Select a product
             </Button>
           </InlineStack>
 
           {selectedImage && (
-            <Box paddingBlockStart="400" paddingBlockEnd="200" >
+            <Box paddingBlockStart="400" paddingBlockEnd="200">
               <BlockStack gap="100" align="center">
-                <Text variant="bodySm" as="p" tone="subdued">Image selected:</Text>
-                <Thumbnail source={selectedImage} alt="Selected product" size="large" />
+                <Text variant="bodySm" as="p" tone="subdued">
+                  Image selected:
+                </Text>
+                <Thumbnail
+                  source={selectedImage}
+                  alt="Selected product"
+                  size="large"
+                />
               </BlockStack>
             </Box>
           )}
@@ -130,7 +143,7 @@ export function InitialStickerGeneration({ onGenerate }: InitialStickerGeneratio
             />
           </Box>
 
-          <Box  paddingBlockStart="300">
+          <Box paddingBlockStart="300">
             <Button
               variant="primary"
               size="large"

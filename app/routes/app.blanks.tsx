@@ -1,25 +1,14 @@
-import React, { useState, useCallback } from "react";
-import {
-  Page,
-  Layout,
-  Banner,
-  Grid,
-  Text,
-  Box,
-  Link,
-} from "@shopify/polaris";
+import { useState, useCallback } from "react";
+import { Page, Layout, Banner, Grid, Text, Box, Link } from "@shopify/polaris";
 import MediaSection from "./blanksComponents/MediaSection";
 import SalesCard from "./blanksComponents/OrderCard";
 import TechnicalPackages from "./blanksComponents/TechnicalPackage";
 
-import type { CategoryDetails } from './blanksComponents/categoryData';
-import { categoriesData } from './blanksComponents/categoryData'; // Adjust path if needed
+import type { CategoryDetails } from "./blanksComponents/categoryData";
+import { categoriesData } from "./blanksComponents/categoryData";
 
-// --- TEMPORARY SETTING: Define which category should be the ONLY one enabled ---
-// Change this value to "Pants", "Hoodies", etc., to test other categories.
-// If this category doesn't exist in your `categoryData.ts`, all options might appear disabled.
+// --- TEMPORARY SETTING: category with the ONLY one enabled ---
 const TEMPORARILY_ENABLED_CATEGORY = "Shirts";
-// --- END TEMPORARY SETTING ---
 
 const categoryNames = Object.keys(categoriesData);
 
@@ -30,40 +19,42 @@ if (categoriesData[TEMPORARILY_ENABLED_CATEGORY]) {
 } else if (categoryNames.length > 0) {
   initialCategory = categoryNames[0];
   console.warn(
-    `TEMPORARILY_ENABLED_CATEGORY "${TEMPORARILY_ENABLED_CATEGORY}" not found. Defaulting to "${initialCategory}".`
+    `TEMPORARILY_ENABLED_CATEGORY "${TEMPORARILY_ENABLED_CATEGORY}" not found. Defaulting to "${initialCategory}".`,
   );
 } else {
   initialCategory = "Shirts"; // Fallback if categoriesData is empty
   console.warn(
-    `categoriesData is empty or TEMPORARILY_ENABLED_CATEGORY is not found. Defaulting to "${initialCategory}".`
+    `categoriesData is empty or TEMPORARILY_ENABLED_CATEGORY is not found. Defaulting to "${initialCategory}".`,
   );
 }
 
-
 export default function BlanksPage() {
-  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
+  const [selectedCategory, setSelectedCategory] =
+    useState<string>(initialCategory);
 
-  const handleCategoryChange = useCallback(
-    (newCategory: string) => {
-      // Only allow the change if the new category is the one we've designated as enabled
-      // and it exists in our data.
-      if (newCategory === TEMPORARILY_ENABLED_CATEGORY && categoriesData[newCategory]) {
-        setSelectedCategory(newCategory);
-      } else if (categoriesData[newCategory]) {
-        // This part might not be reached if UI elements are correctly disabled,
-        // but it's a good safeguard or for alternative scenarios.
-        console.log(`Switching to category "${newCategory}" is currently disabled by TEMPORARILY_ENABLED_CATEGORY setting.`);
-      }
-    },
-    [], // TEMPORARILY_ENABLED_CATEGORY is a constant defined outside, so not needed in deps
-  );
+  const handleCategoryChange = useCallback((newCategory: string) => {
+    if (
+      newCategory === TEMPORARILY_ENABLED_CATEGORY &&
+      categoriesData[newCategory]
+    ) {
+      setSelectedCategory(newCategory);
+    } else if (categoriesData[newCategory]) {
+      console.log(
+        `Switching to category "${newCategory}" is currently disabled by TEMPORARILY_ENABLED_CATEGORY setting.`,
+      );
+    }
+  }, []);
 
   // Gracefully handle if selectedCategory somehow doesn't exist in categoriesData
-  // (e.g., if initialCategory fallback logic leads to an invalid state, though unlikely with current setup)
-  const currentCategoryDetails: CategoryDetails = categoriesData[selectedCategory] || 
-                                                 categoriesData[categoryNames[0]] || 
-                                                 { title: "Error: No Category Data", subtitle: "Please check configuration.", images: [], titleMetadata: undefined };
-
+  const currentCategoryDetails: CategoryDetails = categoriesData[
+    selectedCategory
+  ] ||
+    categoriesData[categoryNames[0]] || {
+      title: "Error: No Category Data",
+      subtitle: "Please check configuration.",
+      images: [],
+      titleMetadata: undefined,
+    };
 
   const stretchStyles = `
     .equal-height-card-wrapper > .Polaris-LegacyCard {
@@ -80,7 +71,7 @@ export default function BlanksPage() {
         </Text>
         <Layout>
           <Layout.Section>
-            <Banner title="Experimental mode" onDismiss={() => { /* Implement dismiss logic if needed */ }}>
+            <Banner title="Experimental mode" onDismiss={() => {}}>
               <p>
                 Blanks is still in Beta testing; you can still view our extended
                 catalog below.
@@ -105,7 +96,7 @@ export default function BlanksPage() {
         actionGroups={[
           {
             title: `Category: ${selectedCategory}`,
-            actions: categoryNames.map(catName => ({
+            actions: categoryNames.map((catName) => ({
               content: catName,
               onAction: () => handleCategoryChange(catName),
               // Disable the action if it's not the TEMPORARILY_ENABLED_CATEGORY
@@ -122,12 +113,18 @@ export default function BlanksPage() {
           <Layout.Section>
             <Grid>
               <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 6, xl: 6 }}>
-                <div style={{ height: '100%' }} className="equal-height-card-wrapper">
+                <div
+                  style={{ height: "100%" }}
+                  className="equal-height-card-wrapper"
+                >
                   <TechnicalPackages />
                 </div>
               </Grid.Cell>
               <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 6, xl: 6 }}>
-                <div style={{ height: '100%' }} className="equal-height-card-wrapper">
+                <div
+                  style={{ height: "100%" }}
+                  className="equal-height-card-wrapper"
+                >
                   <SalesCard />
                 </div>
               </Grid.Cell>

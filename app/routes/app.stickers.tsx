@@ -1,4 +1,3 @@
-// app/routes/stickerspage.tsx
 import { useState, useCallback } from "react";
 import {
   Page,
@@ -10,24 +9,20 @@ import {
   Banner,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
-
-// Import your modular components - ensure paths are correct
 import { InitialStickerGeneration } from "./stickerComponents/InitialStickerGeneration";
 import { GenerationControls } from "./stickerComponents/GenerationControls";
-import { ImagePreview } from "./stickerComponents/ImagePreview"; // ShinySticker is now used within ImagePreview
+import { ImagePreview } from "./stickerComponents/ImagePreview";
 import { StickerSettings } from "./stickerComponents/StickerSettings";
 import OrderCard from "./stickerComponents/OrderCard";
 
-
-// A default product photo if none has been selected yet
 const DEFAULT_PRODUCT_IMAGE =
   "https://i.imgur.com/p5eOV3L.png";
-
+ 
 export default function StickersPage() {
   const [currentView, setCurrentView] = useState<"initial" | "generation">(
     "initial",
   );
-  const [productImage, setProductImage] = useState<string | null>(null); // Start with null initially
+  const [productImage, setProductImage] = useState<string | null>(null);
   const [initialPrompt, setInitialPrompt] = useState<string>("");
   const [freeImagesLeft, setFreeImagesLeft] = useState<number>(4);
 
@@ -47,13 +42,12 @@ export default function StickersPage() {
 
   const handleGoBackToInitialView = useCallback(() => {
     setCurrentView("initial");
-    // Optionally clear selections:
     // setProductImage(null);
     // setInitialPrompt('');
   }, []);
 
-  // For testing, set a default image if none selected yet in generation view.
-  // In a real app, you might enforce image selection before reaching this view.
+  // For testing,  default image.
+  // on app released, enforce image selection before reaching this view.
   const displayProductImage =
     productImage ||
     (currentView === "generation" ? DEFAULT_PRODUCT_IMAGE : null);
@@ -107,14 +101,13 @@ export default function StickersPage() {
               Stickers
             </Text>
           </Box>
-          {/* Banner now outside the inner Layout */}
           <Banner title="Experimental mode" onDismiss={() => {}}>
             <p>
               Stickers is still in Beta testing; you can still Generate
               stickers below.
             </p>
           </Banner>
-          <Box paddingBlockEnd="400" /> {/* Adds spacing below the banner */}
+          <Box paddingBlockEnd="400" />
 
           <Layout>
             <Layout.Section>

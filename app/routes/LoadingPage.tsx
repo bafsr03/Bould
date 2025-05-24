@@ -14,7 +14,6 @@ import { TitleBar } from "@shopify/app-bridge-react";
 
 interface LoadingPageProps {
   pageTitleInBar?: string; // Title for the Shopify App Bridge TitleBar
-  // The main H1 header text will be represented by a SkeletonDisplayText
 }
 
 export default function LoadingPage({
@@ -25,19 +24,18 @@ export default function LoadingPage({
       <TitleBar title={pageTitleInBar} />
       <Layout>
         <Layout.Section>
-          {/* Mimic the heading structure (e.g., <Text variant="headingXl" as="h1">Page Title</Text>) */}
           <Box paddingBlockStart="400" paddingBlockEnd="200">
             <SkeletonDisplayText size="extraLarge" />
           </Box>
 
-          {/* Mimic a banner or initial content block (like the Beta banner or CalloutCard) */}
+          {/* initial content block */}
           <Box paddingBlockEnd="400">
             <LegacyCard sectioned>
               <SkeletonBodyText lines={2} />
             </LegacyCard>
           </Box>
 
-          {/* Mimic main content layout (example structure) */}
+          {/*  main content layout */}
           <Layout>
             <Layout.Section>
               <LegacyCard sectioned>

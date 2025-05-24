@@ -6,7 +6,7 @@ import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 
 import { authenticate } from "../shopify.server";
-import LoadingPage from "./loadingpage"; // Import the new LoadingPage component
+import LoadingPage from "./loadingpage"; 
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
@@ -23,21 +23,18 @@ function getLoadingTitle(pathname: string): string {
   if (pathname.startsWith("/app/converter")) return "Loading Converter...";
   if (pathname.startsWith("/app/orders")) return "Loading Orders...";
   if (pathname.startsWith("/app/pricing")) return "Loading Pricing...";
-  if (pathname.startsWith("/app")) return "Loading Bould..."; // For home or other general app pages
+  if (pathname.startsWith("/app")) return "Loading Bould..."; 
   return "Loading..."; // Default
 }
 
 export default function App() {
   const { apiKey } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
-  const location = useLocation(); // Current location for initial load context
+  const location = useLocation(); 
 
-  // navigation.state is 'loading' when navigating to a new page and its loader is running.
-  // navigation.state can also be 'submitting' for form submissions.
+  //  use navigation.state it can also be 'submitting' for form submissions.
   const isLoading = navigation.state === "loading" || navigation.state === "submitting";
 
-  // Use navigation.location.pathname for the target path during navigation,
-  // otherwise use the current location.pathname (e.g., for initial load context, though this primarily targets transitions).
   const targetPathname = navigation.location?.pathname || location.pathname;
   const loadingPageTitle = getLoadingTitle(targetPathname);
 
@@ -62,7 +59,7 @@ export default function App() {
   );
 }
 
-// Shopify needs Remix to catch some thrown responses, so that their headers are included in the response.
+// Shopify needs Remix to catch some thrown responses, so headers are included in the response.
 export function ErrorBoundary() {
   return boundary.error(useRouteError());
 }
