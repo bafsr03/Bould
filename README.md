@@ -1,8 +1,14 @@
-# Shopify App Template - Remix
+# This is Bould Shopify App - Remix
 
-This is a template for building a [Shopify app](https://shopify.dev/docs/apps/getting-started) using the [Remix](https://remix.run) framework.
+This Shopify app, built with the [Shopify app](https://shopify.dev/docs/apps/getting-started) framework and [Remix](https://remix.run), features three core pages:
 
-Rather than cloning this repo, you can use your preferred package manager and the Shopify CLI with [these steps](https://shopify.dev/docs/apps/getting-started/create).
+Converter: Transforms 2D images into 3D models.
+
+Blanks: Showcases a catalog of pre-fabricated examples.
+
+Stickers: Leverages an image-generation tool to create and customize stickers interactively.
+
+
 
 Visit the [`shopify.dev` documentation](https://shopify.dev/docs/api/shopify-app-remix) for more details on the Remix app package.
 
