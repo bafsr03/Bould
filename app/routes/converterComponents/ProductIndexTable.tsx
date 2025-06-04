@@ -1,101 +1,58 @@
-import { useState } from "react";
-import {
-  IndexTable,
-  IndexFilters,
-  LegacyCard,
-  useSetIndexFiltersMode,
-  Badge,
-} from "@shopify/polaris";
+import { Badge, IndexTable, LegacyCard } from "@shopify/polaris";
+ import React from "react";
 
-const ProductIndexTable = () => {
-  const [sortSelected, setSortSelected] = useState<string[]>(["product asc"]);
-  const { mode, setMode } = useSetIndexFiltersMode();
-  const [queryValue, setQueryValue] = useState("");
+import type { Product } from "../../data";
 
-  const orders = [
-    { id: "p1", product: "Blanks t-shirt", category: "T-shirt", status: <Badge tone="success">Converted</Badge> },
-    { id: "p2", product: "Blanks hoodie", category: "Hoodie", status: <Badge tone="attention">Not Converted</Badge> },
-    { id: "p3", product: "Blanks cap", category: "Cap", status: <Badge tone="success">Converted</Badge> },
-    { id: "p4", product: "Blanks 5 panel cap", category: "Cap", status: <Badge tone="attention">Not Converted</Badge> },
-    { id: "p5", product: "Blanks performance shorts", category: "Shorts", status: <Badge progress="incomplete" tone="info">In process</Badge> },
-  ];
 
+interface Props {
+  products: Product[];
+}
+
+const ProductIndexTable: React.FC<Props> = ({ products }) => {
+  // (We’re not doing any filtering here, but you can wire up IndexFilters if needed.)
 
   const resourceName = { singular: "product", plural: "products" };
 
-  const rowMarkup = orders.map(({ id, product, category, status }, index) => (
-    <IndexTable.Row
-      id={id}
-      key={id}
-      position={index}
-    >
-      <IndexTable.Cell>{product}</IndexTable.Cell>
-      <IndexTable.Cell>{category}</IndexTable.Cell>
-      <IndexTable.Cell>{status}</IndexTable.Cell>
-    </IndexTable.Row>
-  ));
+  // Map our “products” into IndexTable.Row elements:
+  const rowMarkup = products.map((p, index) => {
+    // Show a Badge based on `converted` boolean
+    const statusBadge = p.converted ? (
+      <Badge tone="success">Converted</Badge>
+    ) : (
+      <Badge tone="attention">Not Converted</Badge>
+    );
 
+    return (
+      <IndexTable.Row id={p.id} key={p.id} position={index}>
+        <IndexTable.Cell>{p.name}</IndexTable.Cell>
+        <IndexTable.Cell>{p.category}</IndexTable.Cell>
+        <IndexTable.Cell>{statusBadge}</IndexTable.Cell>
+      </IndexTable.Row>
+    );
+  });
   return (
     <div style={{ height: "100%" }}>
       <LegacyCard>
-        {/* Flex container to manage layout */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
-            maxHeight: 400, 
+            maxHeight: 400,
             width: "100%",
           }}
         >
-          {/* Container for IndexFilters. */}
-          <div
-            style={{
-              background: "var(--p-color-bg-surface)",
-            }}
-          >
-            <IndexFilters
-              sortOptions={[
-                { label: "Product", value: "product asc", directionLabel: "A-Z" },
-                { label: "Product", value: "product desc", directionLabel: "Z-A" },
-                { label: "Category", value: "category asc", directionLabel: "A-Z" },
-                { label: "Category", value: "category desc", directionLabel: "Z-A" },
-              ]}
-              sortSelected={sortSelected}
-              queryValue={queryValue}
-              queryPlaceholder="Search by product or category"
-              onQueryChange={setQueryValue}
-              onQueryClear={() => setQueryValue("")}
-              onSort={setSortSelected}
-              primaryAction={{ type: "save-as", onAction: async () => true, disabled: true }}
-              cancelAction={{ onAction: () => {}, disabled: true }}
-              tabs={[{ content: "All", id: "all-0", isLocked: true }]}
-              selected={0}
-              onSelect={() => {}}
-              canCreateNewView={false}
-              onCreateNewView={() => Promise.resolve(true)}
-              filters={[]}
-              appliedFilters={[]}
-              onClearAll={() => {}}
-              disableStickyMode 
-              mode={mode}
-              setMode={setMode}
-            />
+          {/* If you want to keep IndexFilters, hook them up to sort/query here */}
+          <div style={{ background: "var(--p-color-bg-surface)" }}>
+            {/* <IndexFilters ... /> */}
           </div>
 
-          {/* Scrollable container for IndexTable */}
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto", 
-            }}
-          >
+          <div style={{ flex: 1, overflowY: "auto" }}>
             <IndexTable
               resourceName={resourceName}
-              itemCount={orders.length}
+              itemCount={products.length}
               headings={[
                 { title: "Product" },
                 { title: "Category" },
-               
                 { title: "Status", alignment: "center" },
               ]}
               selectable={false}

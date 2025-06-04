@@ -7,136 +7,70 @@ import {
   InlineGrid,
   Box,
   Tabs,
-  LegacyCard,
-  SkeletonPage,
-  SkeletonBodyText,
-  SkeletonDisplayText,
-  TextContainer,
-  Banner,
   Link,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 
 import DropZoneUploader from "./converterComponents/DropZoneUploader";
 import ProductIndexTable from "./converterComponents/ProductIndexTable";
+import LibraryTable from "./converterComponents/LibraryTable";
+import AnalyticsSection from "./converterComponents/AnalyticsSection";
 import TechnicalPackage from "./converterComponents/TechnicalPackage";
 import Previewer from "./converterComponents/PreviewerPanel";
 import ProductDetails from "./converterComponents/ProductDetails";
-import LibraryTable from "./converterComponents/LibraryTable";
+
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
+import type { Product } from "../data";
+import { products } from "../data";
+
+type LoaderData = {
+  products: Product[];
+};
+
+export const loader: LoaderFunction = async () => {
+  return json<LoaderData>({ products });
+};
 
 export default function ConverterPage() {
+  const { products } = useLoaderData<LoaderData>();
   const [selected, setSelected] = useState(0);
 
-  const handleTabChange = useCallback(
-    (selectedTabIndex: number) => setSelected(selectedTabIndex),
-    [],
-  );
+  const handleTabChange = useCallback((tabIndex: number) => {
+    setSelected(tabIndex);
+  }, []);
 
-  const tabs = [
-    {
-      id: "converter",
-      content: "Converter",
-      panelID: "converter-panel",
-    },
-    {
-      id: "library",
-      content: "Library",
-      panelID: "library-panel",
-    },
-    {
-      id: "analytics",
-      content: "Analytics",
-      panelID: "analytics-panel",
-    },
+  const tabsConfig = [
+    { id: "converter", content: "Converter" },
+    { id: "library", content: "Library" },
+    { id: "analytics", content: "Analytics" },
   ];
-
-  // Determine the title based on active tab
-  const pageTitle = tabs[selected].content;
-
-  const renderAnalyticsSection = () => (
-    <>
-      <Banner
-        title="Analytics coming soon in the next update"
-        tone="info"
-        onDismiss={() => {}}
-      >
-        <p>We're actively working on this feature. Stay tuned!</p>
-      </Banner>
-
-      <SkeletonPage primaryAction>
-        <Layout>
-          <Layout.Section>
-            <LegacyCard sectioned>
-              <SkeletonBodyText />
-            </LegacyCard>
-            <LegacyCard sectioned>
-              <TextContainer>
-                <SkeletonDisplayText size="small" />
-                <SkeletonBodyText />
-              </TextContainer>
-            </LegacyCard>
-            <LegacyCard sectioned>
-              <TextContainer>
-                <SkeletonDisplayText size="small" />
-                <SkeletonBodyText />
-              </TextContainer>
-            </LegacyCard>
-          </Layout.Section>
-          <Layout.Section variant="oneThird">
-            <LegacyCard>
-              <LegacyCard.Section>
-                <TextContainer>
-                  <SkeletonDisplayText size="small" />
-                  <SkeletonBodyText lines={2} />
-                </TextContainer>
-              </LegacyCard.Section>
-              <LegacyCard.Section>
-                <SkeletonBodyText lines={1} />
-              </LegacyCard.Section>
-            </LegacyCard>
-            <LegacyCard subdued>
-              <LegacyCard.Section>
-                <TextContainer>
-                  <SkeletonDisplayText size="small" />
-                  <SkeletonBodyText lines={2} />
-                </TextContainer>
-              </LegacyCard.Section>
-              <LegacyCard.Section>
-                <SkeletonBodyText lines={2} />
-              </LegacyCard.Section>
-            </LegacyCard>
-          </Layout.Section>
-        </Layout>
-      </SkeletonPage>
-    </>
-  );
 
   return (
     <Page>
       <TitleBar title="Bould" />
+
       <Layout>
         <Layout.Section>
-          {/* Dynamic heading based on selected tab */}
-          <Text variant="headingXl" as="h1">
-            {pageTitle}
-          </Text>
-          <Tabs tabs={tabs} selected={selected} onSelect={handleTabChange}>
-            <LegacyCard.Section>
-              {selected === 0 && (
-                <>
-                  <CalloutCard
-                    title="Watch the Steps to Convert any 2D image"
-                    illustration="https://cdn.shopify.com/s/assets/admin/checkout/settings-customizecart-705f57c725ac05be5a34ec20c05b94298cb8afd10aac7bd9c7ad02030f48cfa0.svg"
-                    primaryAction={{ content: "Upload" }}
-                    secondaryAction={{ content: "Watch Tutorial" }}
-                  >
-                    <p>
-                      To upload your Garment to the Converter, drag and drop
-                      your Design in the drop zone, or click on upload.
-                    </p>
-                  </CalloutCard>
+          <Tabs tabs={tabsConfig} selected={selected} onSelect={handleTabChange} />
 
-                  <Box paddingBlockStart="400">
+          {selected === 0 && (
+            <>
+              <Box >
+                <CalloutCard
+                  title="Watch the Steps to Convert any 2D image"
+                  illustration="https://cdn.shopify.com/s/assets/admin/checkout/settings-customizecart.svg"
+                  primaryAction={{ content: "Upload" }}
+                  secondaryAction={{ content: "Watch Tutorial" }}
+                >
+                  <p>
+                    To upload your design, drag and drop into the drop zone or click “Upload.”
+                  </p>
+                </CalloutCard>
+              </Box>
+
+              <Box paddingBlockStart="400">
                     <InlineGrid
                       columns={{
                         xs: "1fr",
@@ -144,50 +78,60 @@ export default function ConverterPage() {
                       }}
                       gap="400"
                     >
-                      <DropZoneUploader />
-                      <ProductIndexTable />
-                    </InlineGrid>
-                  </Box>
+                  <DropZoneUploader />
+                  <ProductIndexTable products={products} />
+                </InlineGrid>
+              </Box>
 
-                  <Box paddingBlockStart="800">
+              <Box paddingBlockStart="400">
                     <InlineGrid
-                      columns={{ xs: "1fr", sm: ["oneThird", "twoThirds"] }}
+                      columns={{
+                        xs: "1fr",
+                        sm: ["twoThirds", "oneThird"],
+                      }}
                       gap="400"
                     >
-                      <ProductDetails />
-                      <Previewer />
-                    </InlineGrid>
-                  </Box>
+                  <ProductDetails /* pass props if needed */ />
+                  <Previewer /* pass props if needed */ />
+                </InlineGrid>
+              </Box>
 
-                  <Box >
-                    <TechnicalPackage />
-                  </Box>
-                </>
-              )}
+              <Box paddingBlockStart="400">
+                <TechnicalPackage /* pass props if needed */ />
+              </Box>
+            </>
+          )}
 
-              {selected === 1 && <LibraryTable />}
+          {selected === 1 && (
+            <Box paddingBlockStart="400">
+              <LibraryTable products={products} />
+            </Box>
+          )}
 
-              {selected === 2 && renderAnalyticsSection()}
-            </LegacyCard.Section>
-          </Tabs>
+          {selected === 2 && (
+            <Box >
+              <AnalyticsSection  />
+            </Box>
+          )}
         </Layout.Section>
       </Layout>
-              {/* Footer */}
-              <Box padding="500">
-                <div style={{ textAlign: "center" }}>
-                  <Text as="h4" tone="subdued">
-                    Need help?{" "}
-                    <Link url="mailto:jake@bouldhq.com" removeUnderline>
-                      Chat with us.
-                    </Link>
-                  </Text>
-                  <Box paddingBlockStart="100">
-                    <Text as="h4" tone="subdued">
-                      © 2025 Bould
-                    </Text>
-                  </Box>
-                </div>
-              </Box>
+
+      <Box padding="500">
+        <div style={{ textAlign: "center" }}>
+          <Text as="h4" tone="subdued">
+            Need help?{" "}
+            <Link url="mailto:jake@bouldhq.com" removeUnderline>
+              Chat with us.
+            </Link>
+          </Text>
+
+          <Box paddingBlockStart="100">
+            <Text as="h4" tone="subdued">
+              © 2025 Bould
+            </Text>
+          </Box>
+        </div>
+      </Box>
     </Page>
   );
 }

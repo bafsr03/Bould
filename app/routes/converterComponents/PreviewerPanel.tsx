@@ -10,7 +10,7 @@ const Previewer = () => {
           </Text>
           <ButtonGroup>
             <Button variant="primary" tone="critical">Delete</Button>
-            <Button variant="primary">Save</Button>
+            <Button variant="primary">Convert</Button>
           </ButtonGroup>
         </InlineStack>
       </Box>

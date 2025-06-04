@@ -24,6 +24,7 @@ import {
   ChatIcon,
   EnvelopeSoftPackIcon,
 } from "@shopify/polaris-icons";
+import { Link as RemixLink} from "@remix-run/react";
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 
@@ -104,9 +105,11 @@ export default function Index() {
               <Text as="p" tone="subdued">
                 Upload your designs to create interactive 3D renders, ready for customers to view.
               </Text>
-              <Button fullWidth variant="primary">
-                Start 3D Conversion
-              </Button>
+              <RemixLink to="/app/converter" style={{ textDecoration: "none", width: "100%" }}>
+                <Button fullWidth variant="primary">
+                  Start 3D Conversion
+                </Button>
+              </RemixLink>
             </BlockStack>
           </Card>
 
@@ -132,9 +135,11 @@ export default function Index() {
               <Text as="p" tone="subdued">
                 Preview and customize blank apparel designs with Beta samples.
               </Text>
-              <Button fullWidth variant="primary">
-                Customize Blanks
-              </Button>
+              <RemixLink to="/app/blanks" style={{ textDecoration: "none", width: "100%" }}>
+                <Button fullWidth variant="primary">
+                  Costumize blanks
+                </Button>
+              </RemixLink>
             </BlockStack>
           </Card>
 
@@ -160,9 +165,11 @@ export default function Index() {
               <Text as="p" tone="subdued">
                 Design custom stickers and receive printed samples in Beta.
               </Text>
-              <Button fullWidth variant="primary">
-                Create Stickers
-              </Button>
+              <RemixLink to="/app/stickers" style={{ textDecoration: "none", width: "100%" }}>
+                <Button fullWidth variant="primary">
+                  Create stickers
+                </Button>
+              </RemixLink>
             </BlockStack>
           </Card>
         </InlineGrid>
