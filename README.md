@@ -4,9 +4,9 @@
 
 ---
 
-This app is built with the [Shopify App](https://shopify.dev/docs/apps/getting-started) framework and [Remix](https://remix.run), featuring:
-
+This app is built with the [Shopify App](https://shopify.dev/docs/apps/getting-started) framework and [Remix](https://remix.run), 
 Future Features include:
+
 - **Converter**: Transforms 2D images into body measurements
 - **Blanks**: Showcases a catalog of pre-sized garments
 - **Stickers**: Uses image generation for product visualizations
