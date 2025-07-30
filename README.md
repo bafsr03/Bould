@@ -1,15 +1,3 @@
-Here's your **fully integrated and structured `README.md`** file for the **Bould Shopify App** project. It combines:
-
-* Your original Remix app documentation
-* The technical/ML integration plan
-* The implementation roadmap
-* Weekly updates and app architecture
-
----
-
-### ✅ You can **copy-paste** the following into your `README.md`:
-
-````md
 # 🧵 Bould — AI-Powered Clothing Fit for Shopify
 
 **Bould** is a native Shopify app that allows customers to upload a photo and receive accurate clothing size recommendations. Powered by 3D body measurements and garment fitting models, Bould helps reduce returns and improve customer satisfaction.
