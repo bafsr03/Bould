@@ -1,4 +1,4 @@
-# Bould — AI-Powered Clothing Fit for Shopify
+# Bould — Clothing Fit for Shopify USING ML
 
 **Bould** is a native Shopify app that allows customers to upload a photo and receive accurate clothing size recommendations. Powered by 3D body measurements and garment fitting models, Bould helps reduce returns and improve customer satisfaction.
 
