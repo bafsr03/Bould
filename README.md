@@ -1,4 +1,4 @@
-# 🧵 Bould — AI-Powered Clothing Fit for Shopify
+# Bould — AI-Powered Clothing Fit for Shopify
 
 **Bould** is a native Shopify app that allows customers to upload a photo and receive accurate clothing size recommendations. Powered by 3D body measurements and garment fitting models, Bould helps reduce returns and improve customer satisfaction.
 
@@ -27,7 +27,7 @@ Visit the [Shopify Remix Docs](https://shopify.dev/docs/api/shopify-app-remix) f
 
 ---
 
-## 🧠 Technical Stack
+##  Technical Stack
 
 | Layer       | Tech                             |
 |-------------|----------------------------------|
@@ -43,7 +43,7 @@ Visit the [Shopify Remix Docs](https://shopify.dev/docs/api/shopify-app-remix) f
 
 ## 📆 Implementation Roadmap
 
-### ✅ Phase 1: Planning & Repo Setup (Week 1–2)
+###  Phase 1: Planning & Repo Setup (Week 1–2)
 
 * [x] Clone and test ML repos locally
 * [ ] Setup body measurement and garment size APIs
@@ -51,7 +51,7 @@ Visit the [Shopify Remix Docs](https://shopify.dev/docs/api/shopify-app-remix) f
 
 ---
 
-### 🔨 Phase 2: Shopify App UI & Polaris (Week 3–4)
+###  Phase 2: Shopify App UI & Polaris (Week 3–4)
 
 * [ ] Build `/dashboard`, `/products`, `/results`
 * [ ] Integrate Polaris UI for all views
@@ -60,7 +60,7 @@ Visit the [Shopify Remix Docs](https://shopify.dev/docs/api/shopify-app-remix) f
 
 ---
 
-### 🔁 Phase 3: ML API Integration (Week 5–7)
+###  Phase 3: ML API Integration (Week 5–7)
 
 * [ ] Send uploaded image → ML API
 * [ ] Receive body dimensions → frontend
@@ -68,7 +68,7 @@ Visit the [Shopify Remix Docs](https://shopify.dev/docs/api/shopify-app-remix) f
 
 ---
 
-### 🧪 Phase 4: Testing & Matching (Week 8–10)
+###  Phase 4: Testing & Matching (Week 8–10)
 
 * [ ] Upload 5 sample garments for testing
 * [ ] Match user sizes to store’s garment metadata
@@ -76,7 +76,7 @@ Visit the [Shopify Remix Docs](https://shopify.dev/docs/api/shopify-app-remix) f
 
 ---
 
-### 🚀 Phase 5: Final Polish + Go Live (Week 11–12)
+###  Phase 5: Final Polish + Go Live (Week 11–12)
 
 * [ ] Shopify landing page for Bould
 * [ ] Final QA and UX tweaks
@@ -86,15 +86,15 @@ Visit the [Shopify Remix Docs](https://shopify.dev/docs/api/shopify-app-remix) f
 
 ## 🛍️ Admin Features
 
-* Upload custom size charts per garment
-* Connect charts to Shopify products
-* View matching success & analytics
+* Upload custom size charts per garment, based on images or current catalog.
+* Connect charts to Shopify products. 
+* View matching success & analytics.
 
 ---
 
 ## 📲 User Flow
 
-1. Upload or take a photo
+1. Upload or take a photo, if not add custom measurements manually.
 2. Body size detected by ML API
 3. Garment size matched via store’s data
 4. Recommended size shown to customer
@@ -102,7 +102,7 @@ Visit the [Shopify Remix Docs](https://shopify.dev/docs/api/shopify-app-remix) f
 ---
 
 
-## 🧩 ML Repositories Used
+##  ML Repositories Used
 
 | Repository                                                                                      | Purpose |
 |--------------------------------------------------------------------------------------------------|---------|
@@ -111,7 +111,7 @@ Visit the [Shopify Remix Docs](https://shopify.dev/docs/api/shopify-app-remix) f
 
 ---
 
-## 🏗️ App Architecture
+## App Architecture
 
 ### 🔹 Pages
 - `/dashboard`: Image upload + measurement results
@@ -129,7 +129,7 @@ Visit the [Shopify Remix Docs](https://shopify.dev/docs/api/shopify-app-remix) f
 
 ---
 
-## 🧪 Local Setup
+##  Local Setup
 
 ### Prerequisites
 - Node.js >= 18.x
@@ -150,7 +150,7 @@ pip install -r requirements.txt
 python app.py
 ````
 
-## 🔧 Prisma & Database
+##  Prisma & Database
 
 * Default: SQLite for development
 * Production ready: PostgreSQL, MySQL, or MongoDB
@@ -161,7 +161,7 @@ python app.py
   npx prisma db push
   ```
 
-## 💬 Weekly Worklog
+##  Weekly Worklog
 
 | Date          | Update                                                    |
 | ------------- | --------------------------------------------------------- |
@@ -172,7 +172,7 @@ python app.py
 ---
 
 
-## 🧠 Resources
+## Resources
 
 * [Remix Docs](https://remix.run/docs/en/main)
 * [Shopify App CLI](https://shopify.dev/docs/apps/tools/cli)
