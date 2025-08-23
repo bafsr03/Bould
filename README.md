@@ -46,8 +46,8 @@ Visit the [Shopify Remix Docs](https://shopify.dev/docs/api/shopify-app-remix) f
 ###  Phase 1: Planning & Repo Setup (Week 1–2)
 
 * [x] Clone and test ML repos locally
-* [ ] Setup body measurement and garment size APIs
-* [ ] Define API interface between app ↔ ML service
+* [x] Setup body measurement and garment size APIs
+* [x] Define API interface between app ↔ ML service
 
 ---
 
@@ -70,9 +70,9 @@ Visit the [Shopify Remix Docs](https://shopify.dev/docs/api/shopify-app-remix) f
 
 ###  Phase 4: Testing & Matching (Week 8–10)
 
-* [ ] Upload 5 sample garments for testing
+* [x] Upload 5 sample garments for testing
 * [ ] Match user sizes to store’s garment metadata
-* [ ] Add logging + rate limiting for 100 requests/user/month
+* [x] Add logging + rate limiting for 100 requests/user/month
 
 ---
 
