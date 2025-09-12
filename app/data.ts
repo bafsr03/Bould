@@ -51,3 +51,35 @@ export const products: Product[] = [
     status: "draft",
   },
 ];
+
+
+// app/data.ts
+// ────────────────────────────────────────────────────────────────────────────
+// A simple in‐memory “fake” store. Resets whenever the server restarts.
+
+export type StoreDetails = {
+  storeName: string;
+  accountEmail: string;
+};
+
+let storeDetails: StoreDetails = {
+  storeName: "Bould",
+  accountEmail: "bould@example.com",
+};
+
+/**
+ * Fetch the current store details.
+ */
+export async function getStoreDetails(): Promise<StoreDetails> {
+  return storeDetails;
+}
+
+/**
+ * Overwrite the store details in memory.
+ */
+export async function updateStoreDetails(
+  updates: StoreDetails
+): Promise<StoreDetails> {
+  storeDetails = updates;
+  return storeDetails;
+}

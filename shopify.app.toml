@@ -3,7 +3,7 @@
 client_id = "b6d437a7d969cd77e40e9cb95583c5fd"
 name = "Bould"
 handle = "bould"
-application_url = "https://automatically-coffee-career-philip.trycloudflare.com"
+application_url = "https://reporters-continuously-hispanic-probe.trycloudflare.com"
 embedded = true
 
 [build]
@@ -26,11 +26,7 @@ api_version = "2025-04"
 scopes = "write_products"
 
 [auth]
-redirect_urls = [
-  "https://automatically-coffee-career-philip.trycloudflare.com/auth/callback",
-  "https://automatically-coffee-career-philip.trycloudflare.com/auth/shopify/callback",
-  "https://automatically-coffee-career-philip.trycloudflare.com/api/auth/callback"
-]
+redirect_urls = ["https://reporters-continuously-hispanic-probe.trycloudflare.com/auth/callback", "https://reporters-continuously-hispanic-probe.trycloudflare.com/auth/shopify/callback", "https://reporters-continuously-hispanic-probe.trycloudflare.com/api/auth/callback"]
 
 [pos]
 embedded = false
