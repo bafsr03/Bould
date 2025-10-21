@@ -11,35 +11,56 @@ import {
   TextField,
   Box,
 } from "@shopify/polaris";
+import { Form } from "@remix-run/react";
 
 
-export default function ControlsPanel() {
-  const [selectedCategory, setSelectedCategory] = useState("hat");
+type ShopifyProduct = {
+  id: string;
+  title: string;
+  productType: string;
+  vendor: string;
+  status: string;
+  imageUrl: string | null;
+};
+
+interface Props {
+  selected?: ShopifyProduct | null;
+  status?: { state: string; processed: boolean } | null;
+}
+
+export default function ControlsPanel({ selected, status }: Props) {
+  const [selectedCategory, setSelectedCategory] = useState("1");
+  const [trueSize, setTrueSize] = useState("M");
+  const [unit, setUnit] = useState("cm");
+  const [trueWaist, setTrueWaist] = useState("50");
   const [inputHex, setInputHex] = useState("");
   const [colors, setColors] = useState<string[]>([]);
+  const [overrideFile, setOverrideFile] = useState<File | null>(null);
 
+  // DeepFashion2 categories 1..13 (simplified labels)
   const categoryOptions = [
-    { label: "Cap", value: "cap" },
-    { label: "T-Shirt", value: "tshirt" },
-    { label: "Pants", value: "pants" },
-    { label: "Hoodies", value: "hoodies" },
-    { label: "Shorts", value: "shorts" },
-    { label: "Sweatshirts", value: "sweatshirts" },
-    { label: "Jackets", value: "jackets" },
+    { label: "Short sleeve top (1)", value: "1" },
+    { label: "Long sleeve top (2)", value: "2" },
+    { label: "Short sleeve outwear (3)", value: "3" },
+    { label: "Long sleeve outwear (4)", value: "4" },
+    { label: "Vest (5)", value: "5" },
+    { label: "Sling (6)", value: "6" },
+    { label: "Shorts (7)", value: "7" },
+    { label: "Trousers (8)", value: "8" },
+    { label: "Skirt (9)", value: "9" },
+    { label: "Short sleeve dress (10)", value: "10" },
+    { label: "Long sleeve dress (11)", value: "11" },
+    { label: "Vest dress (12)", value: "12" },
+    { label: "Sling dress (13)", value: "13" },
   ];
 
-  const sizeOptions = [
-    "xxs", "xs", "s", "m", "l", "xl", "xxl", "xxxl", "onefit",
-  ];
+  const sizeOptions = ["XXS","XS","S","M","L","XL","XXL","XXXL","ONEFIT"];
 
   const [checkedSizes, setCheckedSizes] = useState<Record<string, boolean>>(
     Object.fromEntries(sizeOptions.map((size) => [size, false]))
   );
 
-  const handleCategoryChange = useCallback(
-    (value: string) => setSelectedCategory(value),
-    []
-  );
+  const handleCategoryChange = useCallback((value: string) => setSelectedCategory(value), []);
 
   const toggleSize = (size: string) => (checked: boolean) => {
     setCheckedSizes((prev) => ({ ...prev, [size]: checked }));
@@ -59,66 +80,61 @@ export default function ControlsPanel() {
     []
   );
 
+  const submitDisabled = !selected;
+
   return (
     <BlockStack gap="400">
-      <Text as="h2" variant="headingMd">Product Details</Text>
+      <Text as="h2" variant="headingMd">{selected ? selected.title : "Select a product to convert"}</Text>
 
-      <Select
-        label="Category"
-        options={categoryOptions}
-        value={selectedCategory}
-        onChange={handleCategoryChange}
-      />
+      {selected && (
+        <InlineStack gap="200" blockAlign="center">
+          <Text as="p" tone="subdued">Type: {selected.productType || '-'}</Text>
+          <Text as="p" tone="subdued">Vendor: {selected.vendor || '-'}</Text>
+          {status && (
+            <Text as="p" tone={status.state === 'completed' ? 'success' : status.state === 'processing' ? undefined : status.state === 'failed' ? 'critical' : 'subdued'}>
+              {status.processed ? 'Processed' : 'Not processed'} • {status.state}
+            </Text>
+          )}
+        </InlineStack>
+      )}
 
-      <Divider />
-
-      <Text as="h3" variant="headingSm">Size Range</Text>
-      <InlineStack wrap gap="200">
-        {sizeOptions.map((size) => (
-          <Checkbox
-            key={size}
-            label={size.toUpperCase()}
-            checked={checkedSizes[size]}
-            onChange={toggleSize(size)}
-          />
-        ))}
-      </InlineStack>
+      <Select label="Category ID" options={categoryOptions} value={selectedCategory} onChange={handleCategoryChange} />
 
       <Divider />
 
-      <Text as="h3" variant="headingSm">HEX Colors</Text>
-      <InlineStack gap="200" align="start" wrap={false}>
-        <TextField
-          label=""
-          labelHidden
-          value={inputHex}
-          onChange={setInputHex}
-          placeholder="#000000"
-          autoComplete="off"
-          type="text"
-        />
-        <Button onClick={addHexColor} variant="primary">
-          Add
-        </Button>
-      </InlineStack>
+      <Text as="h3" variant="headingSm">True Size</Text>
+      <Select label="True Size" options={sizeOptions.map(s=>({label:s,value:s}))} value={trueSize} onChange={setTrueSize as any} />
 
-      <InlineStack gap="200" wrap>
-        {colors.map((hex) => (
-          <Tag key={hex} onRemove={removeHexColor(hex)}>
-            <InlineStack gap="100" align="center">
-              <Box
-                width="100"
-                minHeight="100"
-                borderRadius="200"
-                background={hex as any}
-              />
-              <span>{hex}</span>
-            </InlineStack>
-          </Tag>
-        ))}
+      <InlineStack gap="200">
+        <Select label="Unit" options={[{label:'cm',value:'cm'},{label:'inch',value:'inch'}]} value={unit} onChange={setUnit as any} />
+        <TextField label="True Waist (optional)" value={trueWaist} onChange={setTrueWaist} autoComplete="off" type="number" />
       </InlineStack>
-
       <Divider />
+
+      {selected && (
+        <BlockStack gap="200">
+          <Text as="h3" variant="headingSm">Image</Text>
+          <InlineStack gap="200" blockAlign="center">
+            <img src={overrideFile ? URL.createObjectURL(overrideFile) : (selected.imageUrl || "https://placehold.co/120")}
+                 alt="Selected"
+                 style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 8, border: '1px solid #E1E3E5' }} />
+            <input name="override_image" type="file" accept="image/*" onChange={(e) => setOverrideFile(e.target.files?.[0] || null)} />
+            <Button variant="plain" onClick={() => setOverrideFile(null)}>Use product image</Button>
+          </InlineStack>
+
+          <Form method="post" encType="multipart/form-data">
+            <input type="hidden" name="intent" value="convert" />
+            <input type="hidden" name="productId" value={selected.id} />
+            <input type="hidden" name="title" value={selected.title} />
+            <input type="hidden" name="imageUrl" value={selected.imageUrl || ''} />
+            <input type="hidden" name="category_id" value={selectedCategory} />
+            <input type="hidden" name="true_size" value={trueSize} />
+            <input type="hidden" name="true_waist" value={trueWaist} />
+            <input type="hidden" name="unit" value={unit} />
+            <Button submit variant="primary" disabled={submitDisabled}>Convert</Button>
+          </Form>
+        </BlockStack>
+      )}
     </BlockStack>
   );
 }

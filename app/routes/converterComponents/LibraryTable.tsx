@@ -10,14 +10,27 @@ import {
   Button,
 } from "@shopify/polaris";
 import { DeleteIcon, EditIcon } from "@shopify/polaris-icons";
-import type { Product } from "../../data";
+import { Form } from "@remix-run/react";
 
+type ConversionStatus = "pending" | "processing" | "completed" | "failed";
+
+type ShopifyProduct = {
+  id: string;
+  title: string;
+  productType: string;
+  vendor: string;
+  status: string;
+  imageUrl: string | null;
+};
 
 interface Props {
-  products: Product[];
+  products: ShopifyProduct[];
+  states: Record<string, { status: ConversionStatus; processed: boolean }>;
+  onSelect?: (product: ShopifyProduct) => void;
+  selectedProductId?: string;
 }
 
-export default function LibraryTable({ products }: Props) {
+export default function LibraryTable({ products, states, onSelect, selectedProductId }: Props) {
   const [selectedTab, setSelectedTab] = useState(0);
   const tabs = [
     { id: "all", content: "All" },
@@ -33,7 +46,7 @@ export default function LibraryTable({ products }: Props) {
   // Filter based on the current tab’s id
   const filteredProducts = products.filter((product) => {
     const tabId = tabs[selectedTab].id;
-    return tabId === "all" ? true : product.status === tabId;
+    return tabId === "all" ? true : product.status?.toLowerCase() === tabId;
   });
 
   return (
@@ -63,61 +76,62 @@ export default function LibraryTable({ products }: Props) {
         selectable={false}
         headings={[
           { title: "Product" },
-          { title: "Fabric" },
+          { title: "Category" },
+          { title: "Processed" },
           { title: "Status" },
-          { title: "Converted" },
-          { title: "" },
+          { title: "Actions" },
         ]}
       >
-        {filteredProducts.map(
-          ({ id, name, image, materials, status, converted }, rowIndex) => {
-            const statusTone =
-              status === "active"
-                ? "success"
-                : status === "draft"
-                ? "info"
-                : "critical";
-            return (
-              <IndexTable.Row id={id} key={id} position={rowIndex}>
-                <IndexTable.Cell>
-                  <InlineStack gap="200" align="start">
-                    <Thumbnail source={image} alt={name} size="small" />
-                    <Text variant="bodyMd" fontWeight="medium" as="span">
-                      {name}
-                    </Text>
-                  </InlineStack>
-                </IndexTable.Cell>
+        {filteredProducts.map((p, rowIndex) => {
+          const st = states[p.id] || { status: "pending", processed: false };
+          const statusTone =
+            st.status === "completed"
+              ? "success"
+              : st.status === "processing"
+              ? "info"
+              : st.status === "failed"
+              ? "critical"
+              : "attention";
 
-                <IndexTable.Cell>
-                  <InlineStack gap="100">
-                    {materials.map((mat, i) => (
-                      <Badge key={i}>{mat}</Badge>
-                    ))}
-                  </InlineStack>
-                </IndexTable.Cell>
+          return (
+            <IndexTable.Row id={p.id} key={p.id} position={rowIndex}>
+              <IndexTable.Cell>
+                <InlineStack gap="200" align="start">
+                  <Thumbnail source={p.imageUrl || "https://placehold.co/64"} alt={p.title} size="small" />
+                  <Text variant="bodyMd" fontWeight="medium" as="span">
+                    {p.title} {selectedProductId === p.id ? "(Selected)" : ""}
+                  </Text>
+                </InlineStack>
+              </IndexTable.Cell>
 
-                <IndexTable.Cell>
-                  <Badge tone={statusTone}>
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                  </Badge>
-                </IndexTable.Cell>
+              <IndexTable.Cell>
+                <Text as="span">{p.productType || "-"}</Text>
+              </IndexTable.Cell>
 
-                <IndexTable.Cell>
-                  <Badge tone={converted ? "success" : "attention"}>
-                    {converted ? "Converted" : "Not converted"}
-                  </Badge>
-                </IndexTable.Cell>
+              <IndexTable.Cell>
+                <Badge tone={st.processed ? "success" : "attention"}>
+                  {st.processed ? "Yes" : "No"}
+                </Badge>
+              </IndexTable.Cell>
 
-                <IndexTable.Cell>
-                  <InlineStack gap="100">
-                    <Button icon={EditIcon} variant="plain" />
-                    <Button icon={DeleteIcon} variant="plain" />
-                  </InlineStack>
-                </IndexTable.Cell>
-              </IndexTable.Row>
-            );
-          }
-        )}
+              <IndexTable.Cell>
+                <Badge tone={statusTone}>
+                  {st.status.charAt(0).toUpperCase() + st.status.slice(1)}
+                </Badge>
+              </IndexTable.Cell>
+
+              <IndexTable.Cell>
+                <InlineStack gap="100">
+                  <Button onClick={() => { onSelect && onSelect(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }} variant="primary">
+                    Select
+                  </Button>
+                  <Button icon={EditIcon} variant="plain" />
+                  <Button icon={DeleteIcon} variant="plain" />
+                </InlineStack>
+              </IndexTable.Cell>
+            </IndexTable.Row>
+          );
+        })}
       </IndexTable>
     </LegacyCard>
   );

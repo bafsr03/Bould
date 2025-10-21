@@ -1,0 +1,69 @@
+{% schema %}
+{
+  "name": "Bould size finder",
+  "target": "section",
+  "javascript": "widget.js",
+  "stylesheet": "widget.css",
+  "settings": [
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "Find my perfect size" },
+    { "type": "text", "id": "api_base", "label": "API base URL (optional)", "default": "use_app_route" }
+  ]
+}
+{% endschema %}
+
+<div class="bould-widget-root" data-bould-widget data-block-id="{{ block.id }}" data-api-base="{{ block.settings.api_base }}">
+  <button class="bould-widget__open">{{ block.settings.button_label }}</button>
+
+  <div class="bould-widget" role="dialog" aria-modal="true" hidden>
+    <div class="bould-widget__modal">
+      <button class="bould-widget__close" aria-label="Close">×</button>
+
+    <div class="bould-widget__screen bould-widget__screen--intro" data-screen="intro">
+      <h3>How it works</h3>
+      <ol>
+        <li>Upload a T-pose photo</li>
+        <li>Enter your height</li>
+        <li>Get your size</li>
+      </ol>
+      <div class="bould-widget__actions">
+        <button data-action="close" class="bould-btn bould-btn--subtle">Go back</button>
+        <button data-action="continue" class="bould-btn">Continue</button>
+      </div>
+    </div>
+
+    <div class="bould-widget__screen bould-widget__screen--form" data-screen="form" hidden>
+      <h3>Provide an image</h3>
+      <p>Upload a T‑pose photo and enter your height in cm.</p>
+      <form class="bould-widget__form">
+        <input type="file" accept="image/*" name="user_image" required />
+        <input type="number" name="height" placeholder="Height (cm)" min="80" max="250" required />
+        <button type="submit" class="bould-btn">Submit</button>
+        <p class="bould-widget__privacy">We keep your data private.</p>
+      </form>
+    </div>
+
+    <div class="bould-widget__screen bould-widget__screen--loading" data-screen="loading" hidden>
+      <p>Analyzing your image and creating a try‑on…</p>
+    </div>
+
+    <div class="bould-widget__screen bould-widget__screen--result" data-screen="result" hidden>
+      <h3>Your recommended size</h3>
+      <img class="bould-widget__result-image" alt="Try on result" width="600" height="800" />
+      <p class="bould-widget__size"></p>
+      <div class="bould-widget__actions">
+        <button data-action="close" class="bould-btn">Done</button>
+      </div>
+    </div>
+
+    <div class="bould-widget__screen bould-widget__screen--error" data-screen="error" hidden>
+      <h3>Something went wrong</h3>
+      <pre class="bould-widget__error"></pre>
+      <div class="bould-widget__actions">
+        <button data-action="back-to-form" class="bould-btn">Try again</button>
+      </div>
+    </div>
+    </div>
+  </div>
+</div>
+
+

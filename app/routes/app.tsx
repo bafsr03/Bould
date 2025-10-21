@@ -23,6 +23,7 @@ function getLoadingTitle(pathname: string): string {
   if (pathname.startsWith("/app/converter")) return "Loading Converter...";
   if (pathname.startsWith("/app/orders")) return "Loading Orders...";
   if (pathname.startsWith("/app/pricing")) return "Loading Pricing...";
+  if (pathname.startsWith("/app/analytics")) return "Loading Analytics...";
   if (pathname.startsWith("/app")) return "Loading Bould..."; 
   return "Loading..."; // Default
 }
@@ -45,9 +46,10 @@ export default function App() {
           Home
         </Link>
         <Link to="/app/converter">Converter</Link>
-        <Link to="/app/blanks">Blanks</Link>
+        {/*<Link to="/app/blanks">Blanks</Link>
         <Link to="/app/stickers">Stickers</Link>
-        <Link to="/app/orders">Orders</Link>
+        <Link to="/app/orders">Orders</Link>*/}
+        <Link to="/app/analytics">Admin & Analytics</Link>
         <Link to="/app/pricing">Pricing</Link>
       </NavMenu>
       {isLoading ? (

@@ -30,3 +30,20 @@ model Session {
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
 }
+
+model Conversion {
+  id              String   @id @default(cuid())
+  shopifyProductId String   @unique
+  title           String
+  imageUrl        String?
+  categoryId      Int
+  trueSize        String
+  unit            String
+  trueWaist       String?
+  status          String   @default("pending") // pending | processing | completed | failed
+  processed       Boolean  @default(false)
+  previewImageUrl String?
+  sizeScaleUrl    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

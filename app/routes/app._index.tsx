@@ -100,14 +100,14 @@ export default function Index() {
                 />
               </Box>
               <Text variant="headingMd" as="h3">
-                2D-3D Converter App
+                Convert my garments
               </Text>
               <Text as="p" tone="subdued">
-                Upload your designs to create interactive 3D renders, ready for customers to view.
+                Upload your designs to create renders, ready for customers to view.
               </Text>
               <RemixLink to="/app/converter" style={{ textDecoration: "none", width: "100%" }}>
                 <Button fullWidth variant="primary">
-                  Start 3D Conversion
+                  Start Conversion
                 </Button>
               </RemixLink>
             </BlockStack>
@@ -136,8 +136,8 @@ export default function Index() {
                 Preview and customize blank apparel designs with Beta samples.
               </Text>
               <RemixLink to="/app/blanks" style={{ textDecoration: "none", width: "100%" }}>
-                <Button fullWidth variant="primary">
-                  Costumize blanks
+                <Button fullWidth variant="primary" disabled>
+                  Coming soon
                 </Button>
               </RemixLink>
             </BlockStack>
@@ -163,11 +163,11 @@ export default function Index() {
                 Sticker Maker & Printer
               </Text>
               <Text as="p" tone="subdued">
-                Design custom stickers and receive printed samples in Beta.
+                Design custom stickers using our image generator engine (coming soon).
               </Text>
               <RemixLink to="/app/stickers" style={{ textDecoration: "none", width: "100%" }}>
-                <Button fullWidth variant="primary">
-                  Create stickers
+                <Button fullWidth variant="primary" disabled>
+                  Coming soon
                 </Button>
               </RemixLink>
             </BlockStack>
@@ -202,31 +202,15 @@ export default function Index() {
               </BlockStack>
               <BlockStack gap="100" inlineAlign="center">
           <Text as="p" tone="subdued">Apparel Previews</Text>
-          <Text variant="headingLg" as="h2">0</Text>
+          <Text variant="headingLg" as="h2">-</Text>
               </BlockStack>
               <BlockStack gap="100" inlineAlign="center">
           <Text as="p" tone="subdued">Stickers Generated</Text>
-          <Text variant="headingLg" as="h2">0</Text>
+          <Text variant="headingLg" as="h2">-</Text>
               </BlockStack>
             </InlineStack>
           </Box>
         </Card>
-
-        {/* Section 6: Plan Quota */}
-        <Card>
-          <BlockStack gap="300">
-            <Text variant="headingMd" as="h3">Plan Quota</Text>
-            <BlockStack gap="100">
-              <Text as="p" fontWeight="medium">3D Conversions Remaining</Text>
-              <Text as="p" tone="subdued">0/5 this month</Text>
-            </BlockStack>
-            <BlockStack gap="100">
-              <Text as="p" fontWeight="medium">Sticker generations Remaining</Text>
-              <Text as="p" tone="subdued">0/25 this month</Text>
-            </BlockStack>
-          </BlockStack>
-        </Card>
-
 
         {/* Section 7 */}
         <BlockStack gap="300">
@@ -251,7 +235,7 @@ export default function Index() {
                   </Box>
                   <BlockStack gap="150">
                     <Text as="p" fontWeight="semibold">
-                      How to convert my products to 3D?
+                      How to convert my products ?
                     </Text>
                     <Text as="p" tone="subdued">
                       Configure your products in our converter page, by uploading your product images and stock.

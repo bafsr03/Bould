@@ -30,3 +30,8 @@ redirect_urls = ["https://reporters-continuously-hispanic-probe.trycloudflare.co
 
 [pos]
 embedded = false
+
+[app_proxy]
+prefix = "apps"
+subpath = "bould-widget"
+url = "https://reporters-continuously-hispanic-probe.trycloudflare.com"

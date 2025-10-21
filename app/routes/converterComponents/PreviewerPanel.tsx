@@ -1,6 +1,11 @@
-import { Card, Text, Box, ButtonGroup, Button, InlineStack } from "@shopify/polaris";
+import { Card, Text, Box, ButtonGroup, Button, InlineStack, Thumbnail } from "@shopify/polaris";
 
-const Previewer = () => {
+interface Props {
+  imageUrl?: string | null;
+  statusLabel?: string;
+}
+
+const Previewer = ({ imageUrl, statusLabel }: Props) => {
   return (
     <Card>
       <Box padding="300">
@@ -21,9 +26,13 @@ const Previewer = () => {
         padding="300"
         borderRadius="200"
       >
-        <Text as="p" variant="bodyMd">
-          Your preview 3D apparel will appear here.
-        </Text>
+        {imageUrl ? (
+          <img src={imageUrl} alt="Preview" style={{ maxWidth: "100%", borderRadius: 8 }} />
+        ) : (
+          <Text as="p" variant="bodyMd">
+            {statusLabel || "Your preview 3D apparel will appear here."}
+          </Text>
+        )}
       </Box>
     </Card>
   );
