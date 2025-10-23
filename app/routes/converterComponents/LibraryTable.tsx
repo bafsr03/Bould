@@ -9,7 +9,6 @@ import {
   Thumbnail,
   Button,
 } from "@shopify/polaris";
-import { DeleteIcon, EditIcon } from "@shopify/polaris-icons";
 import { Form } from "@remix-run/react";
 
 type ConversionStatus = "pending" | "processing" | "completed" | "failed";
@@ -121,13 +120,9 @@ export default function LibraryTable({ products, states, onSelect, selectedProdu
               </IndexTable.Cell>
 
               <IndexTable.Cell>
-                <InlineStack gap="100">
-                  <Button onClick={() => { onSelect && onSelect(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }} variant="primary">
-                    Select
-                  </Button>
-                  <Button icon={EditIcon} variant="plain" />
-                  <Button icon={DeleteIcon} variant="plain" />
-                </InlineStack>
+                <Button onClick={() => { onSelect && onSelect(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }} variant="primary">
+                  Select
+                </Button>
               </IndexTable.Cell>
             </IndexTable.Row>
           );

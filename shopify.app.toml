@@ -2,13 +2,13 @@
 
 client_id = "b6d437a7d969cd77e40e9cb95583c5fd"
 name = "Bould"
-handle = "bould"
 application_url = "https://reporters-continuously-hispanic-probe.trycloudflare.com"
 embedded = true
+handle = "bould"
 
 [build]
-include_config_on_deploy = true
 automatically_update_urls_on_dev = true
+include_config_on_deploy = true
 
 [webhooks]
 api_version = "2025-04"
@@ -26,12 +26,16 @@ api_version = "2025-04"
 scopes = "write_products"
 
 [auth]
-redirect_urls = ["https://reporters-continuously-hispanic-probe.trycloudflare.com/auth/callback", "https://reporters-continuously-hispanic-probe.trycloudflare.com/auth/shopify/callback", "https://reporters-continuously-hispanic-probe.trycloudflare.com/api/auth/callback"]
+redirect_urls = [
+  "https://reporters-continuously-hispanic-probe.trycloudflare.com/auth/callback",
+  "https://reporters-continuously-hispanic-probe.trycloudflare.com/auth/shopify/callback",
+  "https://reporters-continuously-hispanic-probe.trycloudflare.com/api/auth/callback"
+]
+
+[app_proxy]
+url = "https://reporters-continuously-hispanic-probe.trycloudflare.com/app/proxy"
+subpath = "bould"
+prefix = "apps"
 
 [pos]
 embedded = false
-
-[app_proxy]
-prefix = "apps"
-subpath = "bould-widget"
-url = "https://reporters-continuously-hispanic-probe.trycloudflare.com"

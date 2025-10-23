@@ -11,9 +11,9 @@ import {
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 
-import DropZoneUploader from "./converterComponents/DropZoneUploader";
 import LibraryTable from "./converterComponents/LibraryTable";
 import Previewer from "./converterComponents/PreviewerPanel";
+import type { Props as PreviewerProps } from "./converterComponents/PreviewerPanel";
 import ProductDetails from "./converterComponents/ProductDetails";
 
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
@@ -99,36 +99,56 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const trueWaist = String(formData.get("true_waist") || "50");
     const unit = String(formData.get("unit") || "cm");
 
+    console.log(`[CONVERTER] Starting conversion for product: ${productTitle} (${productId})`);
+    console.log(`[CONVERTER] Parameters:`, { trueSize, categoryId, trueWaist, unit, imageUrl });
+
     // Replace upsert with findFirst + update/create to work even if unique index is missing
     const existing = await (prisma as any).conversion.findFirst({ where: { shopifyProductId: productId } });
     if (existing) {
+      console.log(`[CONVERTER] Updating existing conversion record: ${existing.id}`);
       await (prisma as any).conversion.update({
         where: { id: existing.id },
         data: { status: "processing", processed: false, title: productTitle, imageUrl, categoryId: parseInt(categoryId, 10), trueSize, unit, trueWaist },
       });
     } else {
+      console.log(`[CONVERTER] Creating new conversion record for product: ${productId}`);
       await (prisma as any).conversion.create({
         data: { shopifyProductId: productId, title: productTitle, imageUrl, categoryId: parseInt(categoryId, 10), trueSize, unit, trueWaist, status: "processing", processed: false },
       });
     }
 
     try {
+      console.log(`[CONVERTER] Preparing image for processing...`);
+      
       // Download image bytes
       const overrideImage = formData.get("override_image");
       let blobToSend: Blob | null = null;
       if (overrideImage && overrideImage instanceof File) {
+        console.log(`[CONVERTER] Using override image file: ${overrideImage.name} (${overrideImage.size} bytes)`);
         blobToSend = overrideImage;
       } else {
+        console.log(`[CONVERTER] Downloading image from: ${imageUrl}`);
         const imgRes = await fetch(imageUrl);
+        if (!imgRes.ok) {
+          throw new Error(`Failed to download image: ${imgRes.status} ${imgRes.statusText}`);
+        }
         const contentType = imgRes.headers.get("content-type") || "image/jpeg";
         const arrayBuf = await imgRes.arrayBuffer();
         blobToSend = new Blob([Buffer.from(arrayBuf)], { type: contentType });
+        console.log(`[CONVERTER] Downloaded image: ${arrayBuf.byteLength} bytes, type: ${contentType}`);
       }
 
-      const baseUrl = process.env.GARMENTS_API_URL || "http://localhost:8000";
+      const baseUrl = process.env.GARMENTS_API_URL || "http://localhost:8001";
+      console.log(`[CONVERTER] Using API base URL: ${baseUrl}`);
+      
+      console.log(`[CONVERTER] Getting API token...`);
       const tokenRes = await fetch(`${baseUrl}/v1/auth/token`, { method: "POST" });
+      if (!tokenRes.ok) {
+        throw new Error(`Failed to get API token: ${tokenRes.status} ${tokenRes.statusText}`);
+      }
       const tokenJson = await tokenRes.json();
       const token = tokenJson.token as string;
+      console.log(`[CONVERTER] Got API token successfully`);
 
       const fd = new FormData();
       if (blobToSend) fd.append("image", blobToSend, `${productTitle || "garment"}.jpg`);
@@ -137,36 +157,80 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       fd.append("true_waist", trueWaist);
       fd.append("unit", unit);
 
+      console.log(`[CONVERTER] Sending processing request to API...`);
+      console.log(`[CONVERTER] Form data:`, {
+        image: blobToSend ? `${blobToSend.size} bytes` : 'none',
+        category_id: categoryId,
+        true_size: trueSize,
+        true_waist: trueWaist,
+        unit: unit
+      });
+
       const processRes = await fetch(`${baseUrl}/v1/process`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
       });
 
+      console.log(`[CONVERTER] Processing response status: ${processRes.status}`);
+      
       if (!processRes.ok) {
-        throw new Error(`Process failed: ${processRes.status}`);
+        const errorText = await processRes.text();
+        console.error(`[CONVERTER] Process failed: ${processRes.status} ${processRes.statusText}`);
+        console.error(`[CONVERTER] Error response:`, errorText);
+        throw new Error(`Process failed: ${processRes.status} - ${errorText}`);
       }
 
       const result = await processRes.json();
+      console.log(`[CONVERTER] Processing completed successfully:`, result);
+      
       const measurementVisPath = result?.measurement_vis as string | undefined;
       const sizeScalePath = result?.size_scale as string | undefined;
       const previewProxyUrl = measurementVisPath ? `/app/converter/file?path=${encodeURIComponent(measurementVisPath)}` : null;
       const sizeScaleProxyUrl = sizeScalePath ? `/app/converter/file?path=${encodeURIComponent(sizeScalePath)}` : null;
+      
+      console.log(`[CONVERTER] Generated URLs:`, {
+        measurementVisPath,
+        sizeScalePath,
+        previewProxyUrl,
+        sizeScaleProxyUrl
+      });
 
       const after = await (prisma as any).conversion.findFirst({ where: { shopifyProductId: productId } });
       if (after) {
+        console.log(`[CONVERTER] Updating conversion record with results:`, {
+          status: "completed",
+          processed: true,
+          previewImageUrl: previewProxyUrl,
+          sizeScaleUrl: sizeScaleProxyUrl
+        });
         await (prisma as any).conversion.update({
           where: { id: after.id },
           data: { status: "completed", processed: true, previewImageUrl: previewProxyUrl ?? undefined, sizeScaleUrl: sizeScaleProxyUrl ?? undefined },
         });
+        console.log(`[CONVERTER] Conversion completed successfully for product: ${productTitle}`);
       }
     } catch (err) {
+      console.error(`[CONVERTER] Conversion failed for product ${productTitle}:`, err);
       const after = await (prisma as any).conversion.findFirst({ where: { shopifyProductId: productId } });
       if (after) {
+        console.log(`[CONVERTER] Updating conversion record to failed status`);
         await (prisma as any).conversion.update({ where: { id: after.id }, data: { status: "failed", processed: false } });
       }
     }
 
+    return redirect("/app/converter");
+  }
+
+  if (intent === "delete") {
+    const productId = String(formData.get("productId") || "");
+    const rec = await (prisma as any).conversion.findFirst({ where: { shopifyProductId: productId } });
+    if (rec) {
+      await (prisma as any).conversion.update({
+        where: { id: rec.id },
+        data: { status: "pending", processed: false, previewImageUrl: null, sizeScaleUrl: null },
+      });
+    }
     return redirect("/app/converter");
   }
 
@@ -210,16 +274,16 @@ export default function ConverterPage() {
                 </Box>
               </Card>
 
-              <Previewer imageUrl={selected ? (states[selected.id]?.previewImageUrl ?? null) : null} statusLabel={selected ? `${states[selected.id]?.status || 'pending'}` : undefined} />
+              {(() => {
+                const previewerProps: PreviewerProps = {
+                  productId: selected?.id || null,
+                  imageUrl: selected ? (states[selected.id]?.previewImageUrl ?? null) : null,
+                  sizeScaleUrl: selected ? (states[selected.id]?.sizeScaleUrl ?? null) : null,
+                  statusLabel: selected ? `${states[selected.id]?.status || 'pending'}` : undefined,
+                };
+                return <Previewer {...previewerProps} />;
+              })()}
             </InlineGrid>
-          </Box>
-
-          <Box paddingBlockStart="400">
-            <Card>
-              <Box padding="400">
-                <DropZoneUploader />
-              </Box>
-            </Card>
           </Box>
 
           <Box paddingBlockStart="600">
