@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   Page,
   Layout,
@@ -210,6 +210,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
         console.log(`[CONVERTER] Conversion completed successfully for product: ${productTitle}`);
       }
+      
+      return json({ 
+        success: true, 
+        conversion: {
+          status: "completed",
+          processed: true,
+          previewImageUrl: previewProxyUrl,
+          sizeScaleUrl: sizeScaleProxyUrl
+        }
+      });
     } catch (err) {
       console.error(`[CONVERTER] Conversion failed for product ${productTitle}:`, err);
       const after = await (prisma as any).conversion.findFirst({ where: { shopifyProductId: productId } });
@@ -217,9 +227,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         console.log(`[CONVERTER] Updating conversion record to failed status`);
         await (prisma as any).conversion.update({ where: { id: after.id }, data: { status: "failed", processed: false } });
       }
+      return json({ 
+        success: false, 
+        conversion: {
+          status: "failed",
+          processed: false,
+          previewImageUrl: null,
+          sizeScaleUrl: null
+        }
+      });
     }
-
-    return redirect("/app/converter");
   }
 
   if (intent === "delete") {
@@ -231,7 +248,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         data: { status: "pending", processed: false, previewImageUrl: null, sizeScaleUrl: null },
       });
     }
-    return redirect("/app/converter");
+    return json({ 
+      success: true, 
+      conversion: {
+        status: "pending",
+        processed: false,
+        previewImageUrl: null,
+        sizeScaleUrl: null
+      }
+    });
   }
 
   return json({ ok: true });
@@ -240,6 +265,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function ConverterPage() {
   const { products, states } = useLoaderData<LoaderData>();
   const [selected, setSelected] = useState<ShopifyProduct | null>(null);
+  const [conversionStates, setConversionStates] = useState<Record<string, any>>(states);
+
+  const handleConversionUpdate = useCallback((productId: string, conversionData: any) => {
+    setConversionStates(prev => ({
+      ...prev,
+      [productId]: {
+        ...prev[productId],
+        ...conversionData
+      }
+    }));
+  }, []);
 
   return (
     <Page>
@@ -261,29 +297,31 @@ export default function ConverterPage() {
           </Box>
 
           <Box paddingBlockStart="400">
-            <InlineGrid
-              columns={{ xs: "1fr", sm: ["twoThirds", "oneThird"] }}
-              gap="400"
-            >
-              <Card>
-                <Box padding="400">
-                  <ProductDetails
-                    selected={selected}
-                    status={selected ? states[selected.id] : undefined as any}
-                  />
-                </Box>
-              </Card>
+            <Layout>
+              <Layout.Section>
+                <Card>
+                  <Box padding="400">
+                    <ProductDetails
+                      selected={selected}
+                      status={selected ? conversionStates[selected.id] : undefined as any}
+                      onConversionUpdate={handleConversionUpdate}
+                    />
+                  </Box>
+                </Card>
+              </Layout.Section>
 
-              {(() => {
-                const previewerProps: PreviewerProps = {
-                  productId: selected?.id || null,
-                  imageUrl: selected ? (states[selected.id]?.previewImageUrl ?? null) : null,
-                  sizeScaleUrl: selected ? (states[selected.id]?.sizeScaleUrl ?? null) : null,
-                  statusLabel: selected ? `${states[selected.id]?.status || 'pending'}` : undefined,
-                };
-                return <Previewer {...previewerProps} />;
-              })()}
-            </InlineGrid>
+              <Layout.Section>
+                {(() => {
+                  const previewerProps: PreviewerProps = {
+                    productId: selected?.id || null,
+                    imageUrl: selected ? (conversionStates[selected.id]?.previewImageUrl ?? null) : null,
+                    sizeScaleUrl: selected ? (conversionStates[selected.id]?.sizeScaleUrl ?? null) : null,
+                    statusLabel: selected ? `${conversionStates[selected.id]?.status || 'pending'}` : undefined,
+                  };
+                  return <Previewer {...previewerProps} />;
+                })()}
+              </Layout.Section>
+            </Layout>
           </Box>
 
           <Box paddingBlockStart="600">

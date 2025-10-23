@@ -16,7 +16,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     console.log(`[CONVERTER FILE] Serving file: ${path}`);
     
     const baseUrl = process.env.GARMENTS_API_URL || "http://localhost:8001";
-    const fileUrl = `${baseUrl}/v1/file?path=${encodeURIComponent(path)}`;
+    const fileUrl = `${baseUrl}/v1/files?path=${encodeURIComponent(path)}`;
     
     console.log(`[CONVERTER FILE] Fetching from: ${fileUrl}`);
     

@@ -86,9 +86,19 @@ const Previewer: React.FC<Props> = ({ productId, imageUrl, sizeScaleUrl, statusL
         borderRadius="200"
       >
         {imageUrl ? (
-          <img src={imageUrl} alt="Preview" style={{ maxWidth: "100%", borderRadius: 8 }} />
+          <img 
+            src={imageUrl} 
+            alt="Preview" 
+            style={{ 
+              maxWidth: "100%", 
+              height: "auto",
+              borderRadius: 8,
+              display: "block",
+              margin: "0 auto"
+            }} 
+          />
         ) : (
-          <Text as="p" variant="bodyMd">
+          <Text as="p" variant="bodyMd" alignment="center">
             {statusLabel || "Your preview 3D apparel will appear here."}
           </Text>
         )}
@@ -105,22 +115,64 @@ const Previewer: React.FC<Props> = ({ productId, imageUrl, sizeScaleUrl, statusL
               <Text as="p" tone="critical">{scaleError}</Text>
             )}
             {scaleData && measurementKeys.length > 0 && (
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <div style={{ 
+                overflowX: "auto", 
+                WebkitOverflowScrolling: "touch",
+                border: "1px solid #E1E3E5",
+                borderRadius: "8px"
+              }}>
+                <table style={{ 
+                  width: "100%", 
+                  borderCollapse: "collapse",
+                  minWidth: "600px"
+                }}>
                   <thead>
                     <tr>
-                      <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #E1E3E5" }}>Measurement ({scaleData.unit || "cm"})</th>
+                      <th style={{ 
+                        textAlign: "left", 
+                        padding: "12px 8px", 
+                        borderBottom: "1px solid #E1E3E5",
+                        backgroundColor: "#F6F6F7",
+                        position: "sticky",
+                        left: 0,
+                        zIndex: 1
+                      }}>
+                        Measurement ({scaleData.unit || "cm"})
+                      </th>
                       {sizeOrder.map((sz) => (
-                        <th key={sz} style={{ textAlign: "center", padding: 8, borderBottom: "1px solid #E1E3E5" }}>{sz}</th>
+                        <th key={sz} style={{ 
+                          textAlign: "center", 
+                          padding: "12px 8px", 
+                          borderBottom: "1px solid #E1E3E5",
+                          backgroundColor: "#F6F6F7",
+                          minWidth: "80px"
+                        }}>
+                          {sz}
+                        </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {measurementKeys.map((k) => (
                       <tr key={k}>
-                        <td style={{ padding: 8, borderBottom: "1px solid #F1F2F3" }}>{k}</td>
+                        <td style={{ 
+                          padding: "12px 8px", 
+                          borderBottom: "1px solid #F1F2F3",
+                          backgroundColor: "#F6F6F7",
+                          position: "sticky",
+                          left: 0,
+                          zIndex: 1,
+                          fontWeight: "500"
+                        }}>
+                          {k}
+                        </td>
                         {sizeOrder.map((sz) => (
-                          <td key={`${k}-${sz}`} style={{ textAlign: "center", padding: 8, borderBottom: "1px solid #F1F2F3" }}>
+                          <td key={`${k}-${sz}`} style={{ 
+                            textAlign: "center", 
+                            padding: "12px 8px", 
+                            borderBottom: "1px solid #F1F2F3",
+                            minWidth: "80px"
+                          }}>
                             {scaleData?.scale?.[sz]?.[k] ?? "-"}
                           </td>
                         ))}

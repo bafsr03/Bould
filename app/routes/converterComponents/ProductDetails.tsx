@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Tag,
   BlockStack,
@@ -11,7 +11,7 @@ import {
   TextField,
   Box,
 } from "@shopify/polaris";
-import { Form } from "@remix-run/react";
+import { useSubmit, useActionData } from "@remix-run/react";
 
 
 type ShopifyProduct = {
@@ -26,9 +26,12 @@ type ShopifyProduct = {
 interface Props {
   selected?: ShopifyProduct | null;
   status?: { state: string; processed: boolean } | null;
+  onConversionUpdate?: (productId: string, conversionData: any) => void;
 }
 
-export default function ControlsPanel({ selected, status }: Props) {
+export default function ControlsPanel({ selected, status, onConversionUpdate }: Props) {
+  const submit = useSubmit();
+  const actionData = useActionData<any>();
   const [selectedCategory, setSelectedCategory] = useState("1");
   const [trueSize, setTrueSize] = useState("M");
   const [unit, setUnit] = useState("cm");
@@ -36,6 +39,15 @@ export default function ControlsPanel({ selected, status }: Props) {
   const [inputHex, setInputHex] = useState("");
   const [colors, setColors] = useState<string[]>([]);
   const [overrideFile, setOverrideFile] = useState<File | null>(null);
+  const [isConverting, setIsConverting] = useState(false);
+
+  // Handle conversion response
+  useEffect(() => {
+    if (actionData?.success && actionData?.conversion && selected && onConversionUpdate) {
+      onConversionUpdate(selected.id, actionData.conversion);
+      setIsConverting(false);
+    }
+  }, [actionData, selected, onConversionUpdate]);
 
   // DeepFashion2 categories 1..13 (simplified labels)
   const categoryOptions = [
@@ -80,7 +92,32 @@ export default function ControlsPanel({ selected, status }: Props) {
     []
   );
 
-  const submitDisabled = !selected;
+  const handleConvert = useCallback(() => {
+    if (!selected) return;
+    
+    setIsConverting(true);
+    const formData = new FormData();
+    formData.append("intent", "convert");
+    formData.append("productId", selected.id);
+    formData.append("title", selected.title);
+    formData.append("imageUrl", selected.imageUrl || '');
+    formData.append("category_id", selectedCategory);
+    formData.append("true_size", trueSize);
+    formData.append("true_waist", trueWaist);
+    formData.append("unit", unit);
+    
+    if (overrideFile) {
+      formData.append("override_image", overrideFile);
+    }
+    
+    submit(formData, { 
+      method: "post", 
+      encType: "multipart/form-data",
+      replace: false
+    });
+  }, [selected, selectedCategory, trueSize, trueWaist, unit, overrideFile, submit]);
+
+  const submitDisabled = !selected || isConverting;
 
   return (
     <BlockStack gap="400">
@@ -114,25 +151,39 @@ export default function ControlsPanel({ selected, status }: Props) {
       {selected && (
         <BlockStack gap="200">
           <Text as="h3" variant="headingSm">Image</Text>
-          <InlineStack gap="200" blockAlign="center">
+          <BlockStack gap="200">
             <img src={overrideFile ? URL.createObjectURL(overrideFile) : (selected.imageUrl || "https://placehold.co/120")}
                  alt="Selected"
-                 style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 8, border: '1px solid #E1E3E5' }} />
-            <input name="override_image" type="file" accept="image/*" onChange={(e) => setOverrideFile(e.target.files?.[0] || null)} />
-            <Button variant="plain" onClick={() => setOverrideFile(null)}>Use product image</Button>
-          </InlineStack>
+                 style={{ 
+                   width: "100%", 
+                   maxWidth: "200px", 
+                   height: "auto", 
+                   objectFit: 'cover', 
+                   borderRadius: 8, 
+                   border: '1px solid #E1E3E5',
+                   display: "block",
+                   margin: "0 auto"
+                 }} />
+            <InlineStack gap="200" wrap={false}>
+              <input 
+                name="override_image" 
+                type="file" 
+                accept="image/*" 
+                onChange={(e) => setOverrideFile(e.target.files?.[0] || null)}
+                style={{ flex: 1, minWidth: 0 }}
+              />
+              <Button variant="plain" onClick={() => setOverrideFile(null)}>Use product image</Button>
+            </InlineStack>
+          </BlockStack>
 
-          <Form method="post" encType="multipart/form-data">
-            <input type="hidden" name="intent" value="convert" />
-            <input type="hidden" name="productId" value={selected.id} />
-            <input type="hidden" name="title" value={selected.title} />
-            <input type="hidden" name="imageUrl" value={selected.imageUrl || ''} />
-            <input type="hidden" name="category_id" value={selectedCategory} />
-            <input type="hidden" name="true_size" value={trueSize} />
-            <input type="hidden" name="true_waist" value={trueWaist} />
-            <input type="hidden" name="unit" value={unit} />
-            <Button submit variant="primary" disabled={submitDisabled}>Convert</Button>
-          </Form>
+          <Button 
+            onClick={handleConvert} 
+            variant="primary" 
+            disabled={submitDisabled}
+            loading={isConverting}
+          >
+            {isConverting ? "Converting..." : "Convert"}
+          </Button>
         </BlockStack>
       )}
     </BlockStack>
