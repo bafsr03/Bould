@@ -173,7 +173,12 @@ const Previewer: React.FC<Props> = ({ productId, imageUrl, sizeScaleUrl, statusL
                             borderBottom: "1px solid #F1F2F3",
                             minWidth: "80px"
                           }}>
-                            {scaleData?.scale?.[sz]?.[k] ?? "-"}
+                            {(() => {
+                              const value = scaleData?.scale?.[sz]?.[k];
+                              if (value === null || value === undefined) return "-";
+                              const num = parseFloat(value);
+                              return isNaN(num) ? value : num.toFixed(2);
+                            })()}
                           </td>
                         ))}
                       </tr>

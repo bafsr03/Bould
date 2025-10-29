@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bould Widget Test</title>
+    <link rel="stylesheet" href="assets/widget.css">
+</head>
+<body>
+    <div style="padding: 20px; max-width: 800px; margin: 0 auto;">
+        <h1>Bould Size Widget Test</h1>
+        <p>This is a test page to demonstrate the Bould size recommendation widget functionality.</p>
+        
+        <!-- Widget will be inserted here -->
+        <div class="bould-widget-root" data-bould-widget data-block-id="test-block" data-api-base="http://localhost:3000/apps/bould-widget" data-product-id="gid://shopify/Product/1234567890">
+            <button class="bould-widget__open">Find my perfect size</button>
+
+            <div class="bould-widget" role="dialog" aria-modal="true" hidden>
+                <div class="bould-widget__modal">
+                    <button class="bould-widget__close" aria-label="Close">×</button>
+
+                    <div class="bould-widget__screen bould-widget__screen--intro" data-screen="intro">
+                        <h3>How it works</h3>
+                        <ol>
+                            <li>Upload a T-pose photo</li>
+                            <li>Enter your height</li>
+                            <li>Get your size</li>
+                        </ol>
+                        <div class="bould-widget__actions">
+                            <button data-action="close" class="bould-btn bould-btn--subtle">Go back</button>
+                            <button data-action="continue" class="bould-btn">Continue</button>
+                        </div>
+                    </div>
+
+                    <div class="bould-widget__screen bould-widget__screen--form" data-screen="form" hidden>
+                        <h3>Provide an image</h3>
+                        <p>Upload a T‑pose photo and enter your height in cm.</p>
+                        <form class="bould-widget__form">
+                            <input type="file" accept="image/*" name="user_image" required />
+                            <input type="number" name="height" placeholder="Height (cm)" min="80" max="250" required />
+                            <button type="submit" class="bould-btn">Submit</button>
+                            <p class="bould-widget__privacy">We keep your data private.</p>
+                        </form>
+                    </div>
+
+                    <div class="bould-widget__screen bould-widget__screen--loading" data-screen="loading" hidden>
+                        <p>Analyzing your image and creating a try‑on…</p>
+                    </div>
+
+                    <div class="bould-widget__screen bould-widget__screen--result" data-screen="result" hidden>
+                        <h3>Your recommended size</h3>
+                        <img class="bould-widget__result-image" alt="Try on result" width="600" height="800" />
+                        <p class="bould-widget__size"></p>
+                        <p class="bould-widget__confidence"></p>
+                        <p class="bould-widget__feedback"></p>
+                        <div class="bould-widget__actions">
+                            <button data-action="close" class="bould-btn">Done</button>
+                        </div>
+                    </div>
+
+                    <div class="bould-widget__screen bould-widget__screen--error" data-screen="error" hidden>
+                        <h3>Something went wrong</h3>
+                        <pre class="bould-widget__error"></pre>
+                        <div class="bould-widget__actions">
+                            <button data-action="back-to-form" class="bould-btn">Try again</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 40px; padding: 20px; background: #f5f5f5; border-radius: 8px;">
+            <h3>Test Scenarios</h3>
+            <ul>
+                <li><strong>Normal flow:</strong> Upload an image and enter height to get size recommendation</li>
+                <li><strong>Unprocessed garment:</strong> The widget will show an error message if the garment hasn't been processed</li>
+                <li><strong>Size formatting:</strong> Confidence values are displayed with exactly 2 decimal places</li>
+                <li><strong>Error handling:</strong> Clear error messages for different failure scenarios</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="assets/widget.js"></script>
+</body>
+</html>

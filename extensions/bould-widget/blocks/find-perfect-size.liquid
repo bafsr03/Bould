@@ -6,12 +6,12 @@
   "stylesheet": "widget.css",
   "settings": [
     { "type": "text", "id": "button_label", "label": "Button label", "default": "Find my perfect size" },
-    { "type": "text", "id": "api_base", "label": "API base URL (optional)", "default": "use_app_route" }
+    { "type": "text", "id": "api_base", "label": "API base URL (optional)", "default": "use_app_proxy" }
   ]
 }
 {% endschema %}
 
-<div class="bould-widget-root" data-bould-widget data-block-id="{{ block.id }}" data-api-base="{{ block.settings.api_base }}">
+<div class="bould-widget-root" data-bould-widget data-block-id="{{ block.id }}" data-api-base="{{ block.settings.api_base }}" data-product-id="{{ product.admin_graphql_api_id }}">
   <button class="bould-widget__open">{{ block.settings.button_label }}</button>
 
   <div class="bould-widget" role="dialog" aria-modal="true" hidden>
@@ -47,9 +47,10 @@
     </div>
 
     <div class="bould-widget__screen bould-widget__screen--result" data-screen="result" hidden>
-      <h3>Your recommended size</h3>
-      <img class="bould-widget__result-image" alt="Try on result" width="600" height="800" />
-      <p class="bould-widget__size"></p>
+      <img class="bould-widget__result-image" alt="Try on result" />
+      <h4 class="bould-widget__size"></h4>
+      <p class="bould-widget__confidence"></p>
+      <p class="bould-widget__feedback"></p>
       <div class="bould-widget__actions">
         <button data-action="close" class="bould-btn">Done</button>
       </div>
