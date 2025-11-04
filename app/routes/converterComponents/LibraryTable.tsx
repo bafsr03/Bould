@@ -43,7 +43,6 @@ export default function LibraryTable({ products, states, onSelect, selectedProdu
   const tabs = [
     { id: "all", content: "All" },
     { id: "active", content: "Active" },
-    { id: "draft", content: "Draft" },
     { id: "inactive", content: "Inactive" },
   ];
 
@@ -54,7 +53,20 @@ export default function LibraryTable({ products, states, onSelect, selectedProdu
   // Filter based on the current tab’s id
   const filteredProducts = products.filter((product) => {
     const tabId = tabs[selectedTab].id;
-    return tabId === "all" ? true : product.status?.toLowerCase() === tabId;
+    if (tabId === "all") {
+      return true;
+    }
+    const state = states[product.id];
+    if (!state) {
+      return tabId === "inactive";
+    }
+    if (tabId === "active") {
+      return state.processed === true;
+    }
+    if (tabId === "inactive") {
+      return state.processed !== true;
+    }
+    return false;
   });
 
   return (
