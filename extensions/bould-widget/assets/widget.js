@@ -21,6 +21,23 @@
       return '';
     }
 
+    function getProductImageUrl(){
+      const fromAttr = container.getAttribute('data-product-image') || '';
+      if (fromAttr) return fromAttr;
+      try{
+        const analyticsProduct = window.ShopifyAnalytics && window.ShopifyAnalytics.meta && window.ShopifyAnalytics.meta.product;
+        if (analyticsProduct){
+          if (typeof analyticsProduct.image_url === 'string' && analyticsProduct.image_url) {
+            return analyticsProduct.image_url;
+          }
+          if (Array.isArray(analyticsProduct.images) && analyticsProduct.images.length > 0) {
+            return analyticsProduct.images[0];
+          }
+        }
+      }catch(e){}
+      return '';
+    }
+
     async function open(){
       // Move modal to document.body to ensure full-viewport overlay
       if(!modal.parentElement || modal.parentElement !== document.body){
@@ -79,8 +96,12 @@
         const fd = new FormData(form);
         const file = fd.get('user_image');
         const height = fd.get('height');
+        const productImageUrl = getProductImageUrl();
         if(!(file instanceof File) || !height){
           return showError('Missing image or height.');
+        }
+        if (productImageUrl) {
+          fd.set('product_image_url', productImageUrl);
         }
         showScreen('loading');
         try{
@@ -99,7 +120,8 @@
             height: height,
             imageType: file instanceof File ? file.type : 'N/A',
             productId,
-            correlationId
+            correlationId,
+            productImageUrl
           });
           
           // Add correlation id header and a timeout
@@ -187,6 +209,7 @@
             const maxMs = 55000; // keep under Shopify proxy cap
             const pollDelay = 1500;
             const taskId = data.task_id;
+            let attempt = 0;
             while (Date.now() - start < maxMs) {
               await new Promise(r => setTimeout(r, pollDelay));
               try {
@@ -199,9 +222,24 @@
                     data.tryOnImageUrl = st.result_image_url;
                     break;
                   }
+                  if (st && st.status) {
+                    console.log('[Bould Widget] Try-on status:', st.status);
+                    const statusLower = String(st.status).toLowerCase();
+                    if (['fail', 'failed', 'error'].includes(statusLower)) {
+                      const reason = st.error || 'The try-on provider reported a failure.';
+                      throw new Error(`Try-on failed: ${reason}`);
+                    }
+                  }
+                  attempt += 1;
+                }
+                else {
+                  const text = await stRes.text().catch(() => '');
+                  console.warn('[Bould Widget] Status poll failed', stRes.status, text);
+                  attempt += 1;
                 }
               } catch (pe) {
                 // continue polling
+                console.warn('[Bould Widget] Status poll error', pe);
               }
             }
             if (!data.tryOnImageUrl) {

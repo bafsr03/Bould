@@ -85,15 +85,25 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           headers: { "x-api-key": apiKey },
         });
         const data = await res.json();
+        if (!res.ok) {
+          return json(
+            {
+              error: "Try-on status error",
+              debug: { requestId, taskId, status: res.status, body: data },
+            },
+            { status: 502 },
+          );
+        }
         const payload = {
           ok: true,
           task_id: taskId,
           status: data.status,
           result_image_url: data.result_image_url || null,
+          error: data.error || data.detail || data.message || null,
         };
         return json(payload);
       } catch (e: any) {
-        return json({ error: "Failed to fetch task status" }, { status: 502 });
+        return json({ error: "Failed to fetch task status", debug: { requestId, taskId } }, { status: 502 });
       }
     }
 
@@ -129,6 +139,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const formData = await request.formData();
     const height = formData.get("height");
     const userImage = formData.get("user_image");
+    const productImageUrlField = formData.get("product_image_url");
+    const rawProductImageUrl = typeof productImageUrlField === "string" ? productImageUrlField.trim() : "";
+    const productImageUrl = rawProductImageUrl.startsWith("//") ? `https:${rawProductImageUrl}` : rawProductImageUrl;
 
     const hasUserImage = !!userImage && typeof (userImage as any) === "object" && typeof (userImage as any).arrayBuffer === "function";
     if (typeof height !== "string" || !hasUserImage) {
@@ -225,14 +238,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const userMime = (userImage as any).type || "image/jpeg";
 
     // Download garment image from conversion record
-    const garmentUrl = conversionRecord?.imageUrl;
+    const garmentUrl = productImageUrl || conversionRecord?.imageUrl;
     if (!garmentUrl) {
-      return json({ error: "Garment image URL missing for this product", debug: { requestId, productId } }, { status: 502 });
+      return json({ error: "Garment image URL missing for this product", debug: { requestId, productId, productImageUrl } }, { status: 502 });
     }
 
     const garmentRes = await fetch(garmentUrl);
     if (!garmentRes.ok) {
-      return json({ error: "Failed to download garment image", debug: { requestId, productId, status: garmentRes.status } }, { status: 502 });
+      return json({ error: "Failed to download garment image", debug: { requestId, productId, status: garmentRes.status, garmentUrl } }, { status: 502 });
     }
     const garmentBuffer = Buffer.from(await garmentRes.arrayBuffer());
     const garmentFileName = garmentUrl.split("/").pop() || "garment.jpg";
@@ -321,7 +334,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       tryData?.status === "queued" ||
       (tryData?.provider === "nano" && (tryData?.task_id || tryData?.task?.id || tryData?.task?.taskId))
     ) {
-      const taskId = tryData?.task_id || tryData?.task?.id || tryData?.task?.taskId;
+      const taskId =
+        tryData?.task_id ||
+        tryData?.task?.id ||
+        tryData?.task?.taskId ||
+        tryData?.task?.jobId ||
+        tryData?.task?.job_id ||
+        tryData?.task?.data?.taskId ||
+        tryData?.task?.data?.jobId ||
+        tryData?.task?.data?.job_id;
       const queuedResponse = {
         queued: true,
         task_id: taskId,
@@ -337,7 +358,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         productId,
         queued: true,
       });
-      return json(queuedResponse, { headers: { "X-Correlation-ID": clientCorrelationId || requestId } });
+      return json(queuedResponse, { status: 202, headers: { "X-Correlation-ID": clientCorrelationId || requestId } });
     }
 
     // Otherwise, we have a synchronous result image

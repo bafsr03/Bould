@@ -121,7 +121,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       try {
         const res = await fetch(`${base}/v1/try-on/status?task_id=${encodeURIComponent(taskId)}`, { headers: { 'x-api-key': apiKey, 'X-Correlation-ID': request.headers.get('X-Correlation-ID') || requestId } });
         const data = await res.json();
-        const payload = { ok: true, task_id: taskId, status: data.status, result_image_url: data.result_image_url || null, debug: { requestId } };
+        const payload = { ok: true, task_id: taskId, status: data.status, result_image_url: data.result_image_url || null, error: data.error || data.detail || data.message || null, debug: { requestId } };
         return json(payload, { headers: { 'X-Correlation-ID': request.headers.get('X-Correlation-ID') || requestId } });
       } catch (e: any) {
         return json({ error: 'Failed to fetch task status', debug: { requestId } }, { status: 502 });

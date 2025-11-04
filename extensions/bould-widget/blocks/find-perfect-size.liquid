@@ -11,7 +11,12 @@
 }
 {% endschema %}
 
-<div class="bould-widget-root" data-bould-widget data-block-id="{{ block.id }}" data-api-base="{{ block.settings.api_base }}" data-product-id="{{ product.admin_graphql_api_id }}">
+{% assign featured_image = product.featured_image %}
+{% if featured_image == blank and product.images.size > 0 %}
+  {% assign featured_image = product.images.first %}
+{% endif %}
+
+<div class="bould-widget-root" data-bould-widget data-block-id="{{ block.id }}" data-api-base="{{ block.settings.api_base }}" data-product-id="{{ product.admin_graphql_api_id }}" {% if featured_image != blank %}data-product-image="{{ featured_image | image_url: width: 2048 }}"{% endif %}>
   <button class="bould-widget__open">{{ block.settings.button_label }}</button>
 
   <div class="bould-widget" role="dialog" aria-modal="true" hidden>
