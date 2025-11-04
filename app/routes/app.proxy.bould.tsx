@@ -16,6 +16,32 @@ function logError(error: any, context: string, details?: any) {
   }
 }
 
+async function recordWidgetEvent(data: {
+  productId: string;
+  conversionId?: string | null;
+  shopDomain?: string | null;
+  recommendedSize?: string | null;
+  confidence?: number | null;
+  requestId?: string | null;
+  correlationId?: string | null;
+}) {
+  try {
+    await (prisma as any).widgetEvent.create({
+      data: {
+        shopifyProductId: data.productId,
+        conversionId: data.conversionId ?? null,
+        shopDomain: data.shopDomain ?? null,
+        recommendedSize: data.recommendedSize ?? null,
+        confidence: data.confidence ?? null,
+        requestId: data.requestId ?? null,
+        correlationId: data.correlationId ?? null,
+      },
+    });
+  } catch (error: any) {
+    logError(error, "widget proxy event create", { productId: data.productId, conversionId: data.conversionId ?? null });
+  }
+}
+
 // Handles Shopify App Proxy requests hitting /app/proxy/bould on our app
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const startTime = Date.now();
@@ -166,6 +192,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     const url = new URL(request.url);
     const productId = url.searchParams.get("product_id");
+    const shopDomain = url.searchParams.get("shop") || undefined;
     if (!productId) {
       logRequest("POST", "/app/proxy/bould", 400, Date.now() - startTime, { requestId, error: "Missing product ID" });
       return json({ error: "Product ID is required", debug: { requestId } }, { status: 400 });
@@ -283,6 +310,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         recommendedSize,
         confidence: parseFloat(confidence),
       });
+
+      await recordWidgetEvent({
+        productId,
+        conversionId: conversionRecord?.id,
+        shopDomain,
+        recommendedSize,
+        confidence: Number.parseFloat(confidence),
+        requestId,
+        correlationId: clientCorrelationId,
+      });
+
       return json(mockResponse, { headers: { "X-Correlation-ID": clientCorrelationId || requestId } });
     }
 
@@ -353,6 +391,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         debug: { requestId, productId, conversionStatus, correlationId: clientCorrelationId },
       } as any;
 
+      const queuedRecommended = typeof queuedResponse.recommended_size === "string"
+        ? queuedResponse.recommended_size
+        : typeof queuedResponse.recommended_size === "number"
+        ? String(queuedResponse.recommended_size)
+        : null;
+      const queuedConfidence = typeof queuedResponse.confidence === "number"
+        ? queuedResponse.confidence
+        : typeof queuedResponse.confidence === "string"
+        ? Number.parseFloat(queuedResponse.confidence)
+        : null;
+
+      await recordWidgetEvent({
+        productId,
+        conversionId: conversionRecord?.id,
+        shopDomain,
+        recommendedSize: queuedRecommended,
+        confidence: Number.isFinite(queuedConfidence ?? NaN) ? queuedConfidence : null,
+        requestId,
+        correlationId: clientCorrelationId,
+      });
+
       logRequest("POST", "/app/proxy/bould", 202, Date.now() - startTime, {
         requestId,
         productId,
@@ -379,6 +438,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         provider: tryData.provider || "mock",
       },
     };
+
+    const recommendedOut = typeof response.recommended_size === "string"
+      ? response.recommended_size
+      : typeof response.recommended_size === "number"
+      ? String(response.recommended_size)
+      : null;
+    const confidenceOut = typeof response.confidence === "number"
+      ? response.confidence
+      : typeof response.confidence === "string"
+      ? Number.parseFloat(response.confidence)
+      : null;
+
+    await recordWidgetEvent({
+      productId,
+      conversionId: conversionRecord?.id,
+      shopDomain,
+      recommendedSize: recommendedOut,
+      confidence: Number.isFinite(confidenceOut ?? NaN) ? confidenceOut : null,
+      requestId,
+      correlationId: clientCorrelationId,
+    });
 
     logRequest("POST", "/app/proxy/bould", 200, Date.now() - startTime, {
       requestId,

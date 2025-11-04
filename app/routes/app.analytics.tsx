@@ -13,97 +13,313 @@ import {
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { CalendarIcon } from "@shopify/polaris-icons";
-import type { LoaderFunctionArgs } from "@remix-run/node";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useFetcher, useLoaderData } from "@remix-run/react";
+import prisma from "../db.server";
 import { authenticate } from "../shopify.server";
+
+type MetricsWindow = {
+  label: string;
+  start: Date;
+  end: Date;
+};
 
 type Point = { x: number; y: number };
 type Series = { name: string; color: string; points: Point[] };
 
 type AnalyticsData = {
-  started: number;
-  completed: number;
-  successRate: number; // 0..1
-  changeStartedPct: number;
-  changeCompletedPct: number;
-  changeSuccessPct: number;
+  convertedTotal: number;
+  convertedInWindow: number;
+  widgetSessions: number;
+  widgetUsers: number;
+  widgetProducts: number;
+  widgetCoverageRate: number;
+  changeConvertedPct: number | null;
+  changeWidgetSessionsPct: number | null;
+  changeWidgetUsersPct: number | null;
   series: Series[];
-  labels: string[]; // x labels
+  labels: string[];
+  insights: string;
+  lastUpdatedISO: string;
 };
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
+function startOfDay(date: Date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function addDays(date: Date, days: number) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function calcChange(current: number, previous: number): number | null {
+  if (previous === 0) {
+    return null;
+  }
+  return (current - previous) / previous;
+}
+
+function formatLabel(date: Date) {
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date);
+}
+
+type WidgetEventSample = {
+  requestId: string | null;
+  correlationId: string | null;
+  shopifyProductId: string;
+  createdAt: Date;
+};
+
+type SeriesInput = {
+  window: MetricsWindow;
+  conversions: Array<{ updatedAt: Date }>;
+  widgetEvents: WidgetEventSample[];
+};
+
+function buildSeries({ window, conversions, widgetEvents }: SeriesInput): { series: Series[]; labels: string[] } {
+  const days: Date[] = [];
+  const { start } = window;
+  for (let i = 0; i < 7; i += 1) {
+    days.push(addDays(start, i));
+  }
+
+  const buckets = days.map((day) => ({
+    start: startOfDay(day),
+    end: addDays(startOfDay(day), 1),
+  }));
+
+  const convertedCounts = Array(days.length).fill(0);
+  const sessionCounts = Array(days.length).fill(0);
+
+  conversions.forEach((conv) => {
+    const updated = new Date(conv.updatedAt);
+    buckets.forEach((bucket, idx) => {
+      if (updated >= bucket.start && updated < bucket.end) {
+        convertedCounts[idx] += 1;
+      }
+    });
+  });
+
+  widgetEvents.forEach((event: WidgetEventSample) => {
+    const created = new Date(event.createdAt);
+    buckets.forEach((bucket, idx) => {
+      if (created >= bucket.start && created < bucket.end) {
+        sessionCounts[idx] += 1;
+      }
+    });
+  });
+
+  const labels = days.map((day) => formatLabel(day));
+
+  const series: Series[] = [
+    {
+      name: "Converted Garments",
+      color: "#108043",
+      points: convertedCounts.map((count, idx) => ({ x: idx, y: count })),
+    },
+    {
+      name: "Widget Sessions",
+      color: "#1f73b7",
+      points: sessionCounts.map((count, idx) => ({ x: idx, y: count })),
+    },
+  ];
+
+  return { labels, series };
+}
+
+function uniqueUserCount(events: WidgetEventSample[]): number {
+  const ids = new Set<string>();
+  events.forEach((event: WidgetEventSample) => {
+    let key = (event.correlationId || "").trim();
+    if (!key) {
+      key = (event.requestId || "").trim();
+    }
+    if (!key) {
+      key = `${event.shopifyProductId}-${new Date(event.createdAt).toISOString()}`;
+    }
+    ids.add(key);
+  });
+  return ids.size;
+}
+
+type InsightsInput = {
+  convertedTotal: number;
+  convertedInWindow: number;
+  widgetSessions: number;
+  widgetUsers: number;
+  widgetProducts: number;
+  widgetCoverageRate: number;
+};
+
+async function generateInsights(input: InsightsInput): Promise<string> {
+  const fallback = `${input.convertedInWindow} garments converted this week, ${input.widgetSessions} widget sessions across ${input.widgetProducts} garments (coverage ${(input.widgetCoverageRate * 100).toFixed(0)}%).`;
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    return fallback;
+  }
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        temperature: 0.3,
+        max_tokens: 160,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a fit analytics specialist. In under 80 words, compare garment conversions versus widget sessions, highlight adoption gaps, and suggest one next action to boost widget usage.",
+          },
+          {
+            role: "user",
+            content: JSON.stringify(input),
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      return fallback;
+    }
+
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.content;
+    return (content || fallback).trim();
+  } catch (error) {
+    console.error("[ANALYTICS] Insight generation failed", error);
+    return fallback;
+  }
+}
+
+async function buildAnalyticsData(request: Request): Promise<AnalyticsData> {
   await authenticate.admin(request);
 
-  // Placeholder analytics until wired to your DB/services
-  const labels = ["Jan 5", "Jan 10", "Jan 15", "Jan 20", "Jan 25", "Jan 30", "Feb 1"];
-  const startedSeries: Series = {
-    name: "Started",
-    color: "#1f73b7",
-    points: [
-      { x: 0, y: 1 },
-      { x: 1, y: 1 },
-      { x: 2, y: 2 },
-      { x: 3, y: 1 },
-      { x: 4, y: 5 },
-      { x: 5, y: 1 },
-      { x: 6, y: 1 },
-    ],
+  const now = new Date();
+  const window: MetricsWindow = {
+    label: "Last 7 days",
+    start: startOfDay(addDays(now, -6)),
+    end: addDays(startOfDay(now), 1),
   };
-  const completedSeries: Series = {
-    name: "Completed",
-    color: "#108043",
-    points: [
-      { x: 0, y: 0 },
-      { x: 1, y: 0 },
-      { x: 2, y: 1 },
-      { x: 3, y: 0 },
-      { x: 4, y: 3 },
-      { x: 5, y: 0 },
-      { x: 6, y: 0 },
-    ],
-  };
-  const failedSeries: Series = {
-    name: "Failed",
-    color: "#de3618",
-    points: [
-      { x: 0, y: 0 },
-      { x: 1, y: 0 },
-      { x: 2, y: 0 },
-      { x: 3, y: 0 },
-      { x: 4, y: 1 },
-      { x: 5, y: 0 },
-      { x: 6, y: 0 },
-    ],
+  const prevWindow: MetricsWindow = {
+    label: "Previous 7 days",
+    start: startOfDay(addDays(now, -13)),
+    end: startOfDay(addDays(now, -6)),
   };
 
-  const started = 11;
-  const completed = 7;
-  const successRate = completed / started; // 0.64
+  const [
+    convertedInWindow,
+    convertedPrev,
+    convertedTotal,
+    widgetEventsWindow,
+    widgetEventsPrev,
+    conversionsForSeries,
+  ] = await Promise.all([
+    prisma.conversion.count({
+      where: {
+        updatedAt: { gte: window.start, lt: window.end },
+        processed: true,
+        status: "completed",
+      },
+    }),
+    prisma.conversion.count({
+      where: {
+        updatedAt: { gte: prevWindow.start, lt: prevWindow.end },
+        processed: true,
+        status: "completed",
+      },
+    }),
+    prisma.conversion.count({ where: { processed: true, status: "completed" } }),
+    (prisma as any).widgetEvent.findMany({
+      where: {
+        createdAt: { gte: window.start, lt: window.end },
+        conversion: { processed: true, status: "completed" },
+      },
+      select: { requestId: true, correlationId: true, shopifyProductId: true, createdAt: true },
+    }),
+    (prisma as any).widgetEvent.findMany({
+      where: {
+        createdAt: { gte: prevWindow.start, lt: prevWindow.end },
+        conversion: { processed: true, status: "completed" },
+      },
+      select: { requestId: true, correlationId: true, shopifyProductId: true, createdAt: true },
+    }),
+    prisma.conversion.findMany({
+      where: {
+        processed: true,
+        status: "completed",
+        updatedAt: { gte: window.start, lt: window.end },
+      },
+      select: { updatedAt: true },
+    }),
+  ]);
 
-  const data: AnalyticsData = {
-    started,
-    completed,
-    successRate,
-    changeStartedPct: -0.22,
-    changeCompletedPct: 0.18,
-    changeSuccessPct: 0.07,
-    series: [startedSeries, completedSeries, failedSeries],
+  const widgetSessions = widgetEventsWindow.length;
+  const widgetUsers = uniqueUserCount(widgetEventsWindow);
+  const widgetUsersPrev = uniqueUserCount(widgetEventsPrev);
+  const widgetProducts = new Set(widgetEventsWindow.map((event: WidgetEventSample) => event.shopifyProductId)).size;
+  const widgetSessionsPrev = widgetEventsPrev.length;
+
+  const widgetCoverageRate = convertedTotal > 0 ? widgetProducts / convertedTotal : 0;
+
+  const { labels, series } = buildSeries({ window, conversions: conversionsForSeries, widgetEvents: widgetEventsWindow });
+
+  const insights = await generateInsights({
+    convertedTotal,
+    convertedInWindow,
+    widgetSessions,
+    widgetUsers,
+    widgetProducts,
+    widgetCoverageRate,
+  });
+
+  return {
+    convertedTotal,
+    convertedInWindow,
+    widgetSessions,
+    widgetUsers,
+    widgetProducts,
+    widgetCoverageRate,
+    changeConvertedPct: calcChange(convertedInWindow, convertedPrev),
+    changeWidgetSessionsPct: calcChange(widgetSessions, widgetSessionsPrev),
+    changeWidgetUsersPct: calcChange(widgetUsers, widgetUsersPrev),
+    series,
     labels,
+    insights,
+    lastUpdatedISO: now.toISOString(),
   };
+}
 
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const data = await buildAnalyticsData(request);
   return json(data);
 };
 
-function TrendStat({ label, value, change }: { label: string; value: string; change: number }) {
-  const tone = change > 0 ? "success" : change < 0 ? "critical" : "subdued";
-  const arrow = change > 0 ? "↑" : change < 0 ? "↓" : "→";
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const data = await buildAnalyticsData(request);
+  return json(data);
+};
+
+function TrendStat({ label, value, change }: { label: string; value: string; change: number | null }) {
+  const tone: "success" | "critical" | "subdued" =
+    change === null ? "subdued" : change > 0 ? "success" : change < 0 ? "critical" : "subdued";
+  const arrow = change === null ? "→" : change > 0 ? "↑" : change < 0 ? "↓" : "→";
+  const displayChange = change === null ? "–" : `${Math.round(Math.abs(change) * 100)}%`;
   return (
     <BlockStack gap="050">
-      <Text tone="subdued">{label}</Text>
+      <Text as="span" tone="subdued">{label}</Text>
       <InlineStack gap="200" blockAlign="center">
         <Text variant="headingLg" as="h3">{value}</Text>
-        <Text tone={tone as any}>{arrow} {Math.round(Math.abs(change) * 100)}%</Text>
+        <Text as="span" tone={tone}>{arrow} {displayChange}</Text>
       </InlineStack>
     </BlockStack>
   );
@@ -143,7 +359,42 @@ function LineChart({ series, labels }: { series: Series[]; labels: string[] }) {
 }
 
 export default function AnalyticsPage() {
-  const data = useLoaderData<AnalyticsData>();
+  const initialData = useLoaderData<AnalyticsData>();
+  const fetcher = useFetcher<AnalyticsData>();
+  const [analytics, setAnalytics] = useState(initialData);
+
+  useEffect(() => {
+    if (fetcher.data) {
+      setAnalytics(fetcher.data);
+    }
+  }, [fetcher.data]);
+
+  const refreshing = fetcher.state !== "idle";
+
+  const handleRefresh = useCallback(() => {
+    const formData = new FormData();
+    fetcher.submit(formData, { method: "post" });
+  }, [fetcher]);
+
+  const coverageBadgeTone = useMemo(() => {
+    if (analytics.widgetCoverageRate >= 0.8) return "success";
+    if (analytics.widgetCoverageRate >= 0.5) return "attention";
+    return "critical";
+  }, [analytics.widgetCoverageRate]);
+
+  const legendToneFor = useCallback((name: string): "success" | "attention" | "info" => {
+    if (name === "Converted Garments") return "success";
+    if (name === "Widget Sessions") return "attention";
+    return "info";
+  }, []);
+
+  const lastUpdatedLabel = useMemo(() => {
+    try {
+      return new Date(analytics.lastUpdatedISO).toLocaleString();
+    } catch (error) {
+      return analytics.lastUpdatedISO;
+    }
+  }, [analytics.lastUpdatedISO]);
 
   return (
     <Page>
@@ -152,27 +403,29 @@ export default function AnalyticsPage() {
         <Layout.Section>
           <BlockStack gap="400">
             <InlineStack gap="200">
-              <Button icon={CalendarIcon} variant="secondary">01/01/2025 - 02/21/2025</Button>
-              <Button variant="secondary">Compare: Previous period</Button>
+              <Button icon={CalendarIcon} variant="secondary">Last 7 days</Button>
+              <Button variant="primary" onClick={handleRefresh} loading={refreshing}>
+                Update
+              </Button>
             </InlineStack>
 
             <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
               <Card>
                 <Box padding="400">
-                  <Text variant="headingMd" as="h3">Conversion Trend</Text>
+                  <Text variant="headingMd" as="h3">Conversions vs Widget Usage</Text>
                   <Box paddingBlockStart="300">
                     <InlineGrid columns={{ xs: 1, md: 3 }} gap="400">
-                      <TrendStat label="Conversions Started" value={String(data.started)} change={data.changeStartedPct} />
-                      <TrendStat label="Conversions Completed" value={String(data.completed)} change={data.changeCompletedPct} />
-                      <TrendStat label="Success Rate" value={`${Math.round(data.successRate * 100)}%`} change={data.changeSuccessPct} />
+                      <TrendStat label="Converted Garments" value={String(analytics.convertedInWindow)} change={analytics.changeConvertedPct} />
+                      <TrendStat label="Widget Sessions" value={String(analytics.widgetSessions)} change={analytics.changeWidgetSessionsPct} />
+                      <TrendStat label="Widget Users" value={String(analytics.widgetUsers)} change={analytics.changeWidgetUsersPct} />
                     </InlineGrid>
                   </Box>
                   <Box paddingBlockStart="400">
-                    <LineChart series={data.series} labels={data.labels} />
+                    <LineChart series={analytics.series} labels={analytics.labels} />
                     <InlineStack gap="300" align="center">
-                      <Badge tone="attention">Started</Badge>
-                      <Badge tone="success">Completed</Badge>
-                      <Badge tone="critical">Failed</Badge>
+                      {analytics.series.map((seriesItem) => (
+                        <Badge key={seriesItem.name} tone={legendToneFor(seriesItem.name)}>{seriesItem.name}</Badge>
+                      ))}
                     </InlineStack>
                   </Box>
                 </Box>
@@ -182,14 +435,19 @@ export default function AnalyticsPage() {
                 <Box padding="400">
                   <Text variant="headingMd" as="h3">Insights</Text>
                   <Box paddingBlockStart="200">
-                    <Badge tone="success">Success Rate {Math.round(data.successRate * 100)}%</Badge>
+                    <Badge tone={coverageBadgeTone}>{`Widget coverage ${Math.round(analytics.widgetCoverageRate * 100)}%`}</Badge>
                   </Box>
                   <Divider />
                   <Box paddingBlockStart="300">
                     <BlockStack gap="200">
-                      <Text as="p">• Placeholder insights powered by LLM will appear here.</Text>
-                      <Text as="p" tone="subdued">• We will analyze conversion spikes, failures, and processing times using your OpenAI API key.</Text>
-                      <Text as="p" tone="subdued">• This is front‑end only; wiring to the analysis service will be added later.</Text>
+                      <Text as="p">{analytics.insights}</Text>
+                      <Text as="p" tone="subdued">
+                        {analytics.widgetSessions} sessions · {analytics.widgetUsers} users · {analytics.widgetProducts} garments engaged
+                      </Text>
+                      <Text as="p" tone="subdued">
+                        Total converted garments: {analytics.convertedTotal}
+                      </Text>
+                      <Text as="p" tone="subdued">Last updated: {lastUpdatedLabel}</Text>
                     </BlockStack>
                   </Box>
                 </Box>

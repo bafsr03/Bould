@@ -46,4 +46,21 @@ model Conversion {
   sizeScaleUrl    String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  widgetEvents    WidgetEvent[]
+}
+
+model WidgetEvent {
+  id               String    @id @default(cuid())
+  shopifyProductId String
+  conversionId     String?
+  conversion       Conversion? @relation(fields: [conversionId], references: [id])
+  shopDomain       String?
+  recommendedSize  String?
+  confidence       Float?
+  requestId        String?
+  correlationId    String?
+  createdAt        DateTime  @default(now())
+
+  @@index([shopifyProductId])
+  @@index([createdAt])
 }

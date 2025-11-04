@@ -64,6 +64,32 @@ async function fetchWithRetry(input: RequestInfo | URL, init: RequestInit & { re
   throw lastError;
 }
 
+async function recordWidgetEvent(data: {
+  productId: string;
+  conversionId?: string | null;
+  shopDomain?: string | null;
+  recommendedSize?: string | null;
+  confidence?: number | null;
+  requestId?: string | null;
+  correlationId?: string | null;
+}) {
+  try {
+    await (prisma as any).widgetEvent.create({
+      data: {
+        shopifyProductId: data.productId,
+        conversionId: data.conversionId ?? null,
+        shopDomain: data.shopDomain ?? null,
+        recommendedSize: data.recommendedSize ?? null,
+        confidence: data.confidence ?? null,
+        requestId: data.requestId ?? null,
+        correlationId: data.correlationId ?? null,
+      },
+    });
+  } catch (error: any) {
+    logError(error, 'widget event create', { productId: data.productId, conversionId: data.conversionId ?? null });
+  }
+}
+
 // App Proxy endpoint for the storefront widget
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const startTime = Date.now();
@@ -190,6 +216,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // Get the current product from the request context
     const url = new URL(request.url);
     const productId = url.searchParams.get("product_id");
+    const shopDomain = url.searchParams.get('shop') || undefined;
     
     if (!productId) {
       logRequest('POST', '/apps/bould-widget', 400, Date.now() - startTime, { 
@@ -363,6 +390,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         debug: { measurement_vis_url: recData?.debug?.measurement_vis_url || '', requestId, productId, conversionStatus, correlationId: clientCorrelationId }
       };
     }
+
+    const recommendedSizeOut = typeof response.recommended_size === 'string'
+      ? response.recommended_size
+      : typeof response.recommended_size === 'number'
+      ? String(response.recommended_size)
+      : null;
+    const confidenceOut = typeof response.confidence === 'number'
+      ? response.confidence
+      : typeof response.confidence === 'string'
+      ? Number.parseFloat(response.confidence)
+      : null;
+
+    await recordWidgetEvent({
+      productId,
+      conversionId: conversionRecord?.id,
+      shopDomain,
+      recommendedSize: recommendedSizeOut,
+      confidence: Number.isFinite(confidenceOut ?? NaN) ? confidenceOut : null,
+      requestId,
+      correlationId: clientCorrelationId,
+    });
 
     logRequest('POST', '/apps/bould-widget', 200, Date.now() - startTime, { 
       requestId, 
