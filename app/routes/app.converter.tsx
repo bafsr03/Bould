@@ -33,9 +33,20 @@ type ShopifyProduct = {
   imageUrl: string | null;
 };
 
+type ConversionState = {
+  status: ConversionStatus;
+  processed: boolean;
+  previewImageUrl?: string | null;
+  sizeScaleUrl?: string | null;
+  categoryId?: number | null;
+  trueSize?: string | null;
+  unit?: string | null;
+  trueWaist?: string | null;
+};
+
 type LoaderData = {
   products: ShopifyProduct[];
-  states: Record<string, { status: ConversionStatus; processed: boolean; previewImageUrl?: string | null; sizeScaleUrl?: string | null }>; // keyed by product id
+  states: Record<string, ConversionState>; // keyed by product id
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -79,8 +90,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   for (const p of products) {
     const rec = existing.find((row: any) => row.shopifyProductId === p.id);
     states[p.id] = rec
-      ? { status: rec.status as ConversionStatus, processed: rec.processed, previewImageUrl: rec.previewImageUrl, sizeScaleUrl: rec.sizeScaleUrl }
-      : { status: "pending", processed: false };
+      ? {
+          status: rec.status as ConversionStatus,
+          processed: rec.processed,
+          previewImageUrl: rec.previewImageUrl,
+          sizeScaleUrl: rec.sizeScaleUrl,
+          categoryId: rec.categoryId ?? null,
+          trueSize: rec.trueSize ?? null,
+          unit: rec.unit ?? null,
+          trueWaist: rec.trueWaist ?? null,
+        }
+      : {
+          status: "pending",
+          processed: false,
+          categoryId: null,
+          trueSize: null,
+          unit: null,
+          trueWaist: null,
+        };
   }
 
   return json<LoaderData>({ products, states });
@@ -197,6 +224,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
 
       const after = await (prisma as any).conversion.findFirst({ where: { shopifyProductId: productId } });
+      let updatedRecord = after ?? null;
       if (after) {
         console.log(`[CONVERTER] Updating conversion record with results:`, {
           status: "completed",
@@ -204,36 +232,71 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           previewImageUrl: previewProxyUrl,
           sizeScaleUrl: sizeScaleProxyUrl
         });
-        await (prisma as any).conversion.update({
+        updatedRecord = await (prisma as any).conversion.update({
           where: { id: after.id },
           data: { status: "completed", processed: true, previewImageUrl: previewProxyUrl ?? undefined, sizeScaleUrl: sizeScaleProxyUrl ?? undefined },
         });
         console.log(`[CONVERTER] Conversion completed successfully for product: ${productTitle}`);
       }
-      
+
+      const updatedCategoryId = updatedRecord?.categoryId ?? (Number.isFinite(parseInt(categoryId, 10)) ? parseInt(categoryId, 10) : null);
+      const updatedTrueSize = updatedRecord?.trueSize ?? trueSize;
+      const updatedUnit = updatedRecord?.unit ?? unit;
+      const updatedTrueWaist = updatedRecord?.trueWaist ?? trueWaist;
+
       return json({ 
-        success: true, 
+        success: true,
+        productId,
         conversion: {
           status: "completed",
           processed: true,
           previewImageUrl: previewProxyUrl,
-          sizeScaleUrl: sizeScaleProxyUrl
+          sizeScaleUrl: sizeScaleProxyUrl,
+          categoryId: updatedCategoryId,
+          trueSize: updatedTrueSize,
+          unit: updatedUnit,
+          trueWaist: updatedTrueWaist,
         }
       });
     } catch (err) {
       console.error(`[CONVERTER] Conversion failed for product ${productTitle}:`, err);
+      const errorMessage = err instanceof Error ? err.message : "Conversion failed";
       const after = await (prisma as any).conversion.findFirst({ where: { shopifyProductId: productId } });
       if (after) {
         console.log(`[CONVERTER] Updating conversion record to failed status`);
-        await (prisma as any).conversion.update({ where: { id: after.id }, data: { status: "failed", processed: false } });
+        const updated = await (prisma as any).conversion.update({
+          where: { id: after.id },
+          data: { status: "failed", processed: false },
+        });
+        return json({
+          success: false,
+          productId,
+          error: errorMessage,
+          conversion: {
+            status: "failed",
+            processed: false,
+            previewImageUrl: null,
+            sizeScaleUrl: null,
+            categoryId: updated?.categoryId ?? null,
+            trueSize: updated?.trueSize ?? null,
+            unit: updated?.unit ?? null,
+            trueWaist: updated?.trueWaist ?? null,
+          },
+        });
       }
       return json({ 
-        success: false, 
+        success: false,
+        productId,
+        error: errorMessage,
         conversion: {
           status: "failed",
           processed: false,
           previewImageUrl: null,
-          sizeScaleUrl: null
+          sizeScaleUrl: null,
+          categoryId: Number.isFinite(parseInt(categoryId, 10)) ? parseInt(categoryId, 10) : null,
+          trueSize,
+          unit,
+          trueWaist,
         }
       });
     }
@@ -243,18 +306,37 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const productId = String(formData.get("productId") || "");
     const rec = await (prisma as any).conversion.findFirst({ where: { shopifyProductId: productId } });
     if (rec) {
-      await (prisma as any).conversion.update({
+      const updated = await (prisma as any).conversion.update({
         where: { id: rec.id },
         data: { status: "pending", processed: false, previewImageUrl: null, sizeScaleUrl: null },
       });
+      return json({ 
+        success: true,
+        productId,
+        conversion: {
+          status: "pending",
+          processed: false,
+          previewImageUrl: null,
+          sizeScaleUrl: null,
+          categoryId: updated?.categoryId ?? null,
+          trueSize: updated?.trueSize ?? null,
+          unit: updated?.unit ?? null,
+          trueWaist: updated?.trueWaist ?? null,
+        }
+      });
     }
     return json({ 
-      success: true, 
+      success: true,
+      productId,
       conversion: {
         status: "pending",
         processed: false,
         previewImageUrl: null,
-        sizeScaleUrl: null
+        sizeScaleUrl: null,
+        categoryId: null,
+        trueSize: null,
+        unit: null,
+        trueWaist: null,
       }
     });
   }
@@ -265,9 +347,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function ConverterPage() {
   const { products, states } = useLoaderData<LoaderData>();
   const [selected, setSelected] = useState<ShopifyProduct | null>(null);
-  const [conversionStates, setConversionStates] = useState<Record<string, any>>(states);
+  const [conversionStates, setConversionStates] = useState<Record<string, ConversionState>>(states);
 
-  const handleConversionUpdate = useCallback((productId: string, conversionData: any) => {
+  const handleConversionUpdate = useCallback((productId: string, conversionData: Partial<ConversionState>) => {
     setConversionStates(prev => ({
       ...prev,
       [productId]: {
@@ -300,13 +382,13 @@ export default function ConverterPage() {
             <Layout>
               <Layout.Section>
                 <Card>
-                  <Box padding="400">
-                    <ProductDetails
-                      selected={selected}
-                      status={selected ? conversionStates[selected.id] : undefined as any}
-                      onConversionUpdate={handleConversionUpdate}
-                    />
-                  </Box>
+          <Box padding="400">
+            <ProductDetails
+              selected={selected}
+              status={selected ? conversionStates[selected.id] : undefined}
+              onConversionUpdate={handleConversionUpdate}
+            />
+          </Box>
                 </Card>
               </Layout.Section>
 
@@ -314,9 +396,10 @@ export default function ConverterPage() {
                 {(() => {
                   const previewerProps: PreviewerProps = {
                     productId: selected?.id || null,
-                    imageUrl: selected ? (conversionStates[selected.id]?.previewImageUrl ?? null) : null,
+            imageUrl: selected ? (conversionStates[selected.id]?.previewImageUrl ?? null) : null,
                     sizeScaleUrl: selected ? (conversionStates[selected.id]?.sizeScaleUrl ?? null) : null,
-                    statusLabel: selected ? `${conversionStates[selected.id]?.status || 'pending'}` : undefined,
+            statusLabel: selected ? `${conversionStates[selected.id]?.status || 'pending'}` : undefined,
+            onConversionUpdate: handleConversionUpdate,
                   };
                   return <Previewer {...previewerProps} />;
                 })()}
@@ -324,8 +407,8 @@ export default function ConverterPage() {
             </Layout>
           </Box>
 
-          <Box paddingBlockStart="600">
-            <LibraryTable products={products} states={states} onSelect={setSelected} selectedProductId={selected?.id} />
+        <Box paddingBlockStart="600">
+          <LibraryTable products={products} states={conversionStates} onSelect={setSelected} selectedProductId={selected?.id} />
           </Box>
         </Layout.Section>
       </Layout>

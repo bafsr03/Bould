@@ -1,17 +1,16 @@
 import { useState, useCallback, useEffect } from "react";
 import {
-  Tag,
   BlockStack,
   InlineStack,
   Divider,
   Button,
   Select,
-  Checkbox,
   Text,
   TextField,
   Box,
 } from "@shopify/polaris";
-import { useSubmit, useActionData } from "@remix-run/react";
+import { useFetcher } from "@remix-run/react";
+import type { action as converterAction } from "../app.converter";
 
 
 type ShopifyProduct = {
@@ -25,29 +24,36 @@ type ShopifyProduct = {
 
 interface Props {
   selected?: ShopifyProduct | null;
-  status?: { state: string; processed: boolean } | null;
+  status?: {
+    status: string;
+    processed: boolean;
+    previewImageUrl?: string | null;
+    sizeScaleUrl?: string | null;
+    categoryId?: number | null;
+    trueSize?: string | null;
+    unit?: string | null;
+    trueWaist?: string | null;
+  } | null;
   onConversionUpdate?: (productId: string, conversionData: any) => void;
 }
 
 export default function ControlsPanel({ selected, status, onConversionUpdate }: Props) {
-  const submit = useSubmit();
-  const actionData = useActionData<any>();
+  const convertFetcher = useFetcher<typeof converterAction>();
   const [selectedCategory, setSelectedCategory] = useState("1");
   const [trueSize, setTrueSize] = useState("M");
   const [unit, setUnit] = useState("cm");
   const [trueWaist, setTrueWaist] = useState("50");
-  const [inputHex, setInputHex] = useState("");
-  const [colors, setColors] = useState<string[]>([]);
   const [overrideFile, setOverrideFile] = useState<File | null>(null);
-  const [isConverting, setIsConverting] = useState(false);
+  const isConverting = convertFetcher.state !== "idle";
 
   // Handle conversion response
   useEffect(() => {
-    if (actionData?.success && actionData?.conversion && selected && onConversionUpdate) {
-      onConversionUpdate(selected.id, actionData.conversion);
-      setIsConverting(false);
-    }
-  }, [actionData, selected, onConversionUpdate]);
+    const payload = convertFetcher.data;
+    if (!payload || !onConversionUpdate) return;
+    const { productId, conversion } = payload as any;
+    if (!productId || !conversion) return;
+    onConversionUpdate(productId, conversion);
+  }, [convertFetcher.data, onConversionUpdate]);
 
   // DeepFashion2 categories 1..13 (simplified labels)
   const categoryOptions = [
@@ -68,34 +74,11 @@ export default function ControlsPanel({ selected, status, onConversionUpdate }: 
 
   const sizeOptions = ["XXS","XS","S","M","L","XL","XXL","XXXL","ONEFIT"];
 
-  const [checkedSizes, setCheckedSizes] = useState<Record<string, boolean>>(
-    Object.fromEntries(sizeOptions.map((size) => [size, false]))
-  );
-
   const handleCategoryChange = useCallback((value: string) => setSelectedCategory(value), []);
-
-  const toggleSize = (size: string) => (checked: boolean) => {
-    setCheckedSizes((prev) => ({ ...prev, [size]: checked }));
-  };
-
-  const addHexColor = () => {
-    const validHex = /^#[0-9A-Fa-f]{6}$/;
-    if (validHex.test(inputHex) && !colors.includes(inputHex)) {
-      setColors((prev) => [...prev, inputHex]);
-      setInputHex("");
-    }
-  };
-
-  const removeHexColor = useCallback(
-    (hex: string) => () =>
-      setColors((prev) => prev.filter((c) => c !== hex)),
-    []
-  );
 
   const handleConvert = useCallback(() => {
     if (!selected) return;
     
-    setIsConverting(true);
     const formData = new FormData();
     formData.append("intent", "convert");
     formData.append("productId", selected.id);
@@ -110,12 +93,42 @@ export default function ControlsPanel({ selected, status, onConversionUpdate }: 
       formData.append("override_image", overrideFile);
     }
     
-    submit(formData, { 
-      method: "post", 
-      encType: "multipart/form-data",
-      replace: false
+    const parsedCategory = Number.parseInt(selectedCategory, 10);
+    const categoryNumeric = Number.isNaN(parsedCategory) ? null : parsedCategory;
+
+    onConversionUpdate?.(selected.id, {
+      status: "processing",
+      processed: false,
+      previewImageUrl: null,
+      sizeScaleUrl: null,
+      categoryId: categoryNumeric,
+      trueSize,
+      unit,
+      trueWaist,
     });
-  }, [selected, selectedCategory, trueSize, trueWaist, unit, overrideFile, submit]);
+
+    convertFetcher.submit(formData, {
+      method: "post",
+      encType: "multipart/form-data",
+    });
+  }, [selected, selectedCategory, trueSize, trueWaist, unit, overrideFile, onConversionUpdate, convertFetcher]);
+
+  useEffect(() => {
+    if (!selected) {
+      setSelectedCategory("1");
+      setTrueSize("M");
+      setUnit("cm");
+      setTrueWaist("50");
+      setOverrideFile(null);
+      return;
+    }
+
+    setOverrideFile(null);
+    setSelectedCategory(status?.categoryId ? String(status.categoryId) : "1");
+    setTrueSize(status?.trueSize || "M");
+    setUnit(status?.unit || "cm");
+    setTrueWaist(status?.trueWaist ?? "50");
+  }, [selected?.id, status?.categoryId, status?.trueSize, status?.unit, status?.trueWaist]);
 
   const submitDisabled = !selected || isConverting;
 
@@ -128,8 +141,19 @@ export default function ControlsPanel({ selected, status, onConversionUpdate }: 
           <Text as="p" tone="subdued">Type: {selected.productType || '-'}</Text>
           <Text as="p" tone="subdued">Vendor: {selected.vendor || '-'}</Text>
           {status && (
-            <Text as="p" tone={status.state === 'completed' ? 'success' : status.state === 'processing' ? undefined : status.state === 'failed' ? 'critical' : 'subdued'}>
-              {status.processed ? 'Processed' : 'Not processed'} • {status.state}
+            <Text
+              as="p"
+              tone={
+                status.status === 'completed'
+                  ? 'success'
+                  : status.status === 'processing'
+                  ? undefined
+                  : status.status === 'failed'
+                  ? 'critical'
+                  : 'subdued'
+              }
+            >
+              {status.processed ? 'Processed' : 'Not processed'} • {status.status}
             </Text>
           )}
         </InlineStack>

@@ -24,7 +24,16 @@ type ShopifyProduct = {
 
 interface Props {
   products: ShopifyProduct[];
-  states: Record<string, { status: ConversionStatus; processed: boolean }>;
+  states: Record<string, {
+    status: ConversionStatus;
+    processed: boolean;
+    previewImageUrl?: string | null;
+    sizeScaleUrl?: string | null;
+    categoryId?: number | null;
+    trueSize?: string | null;
+    unit?: string | null;
+    trueWaist?: string | null;
+  }>;
   onSelect?: (product: ShopifyProduct) => void;
   selectedProductId?: string;
 }

@@ -1,20 +1,39 @@
 import { useEffect, useMemo, useState } from "react";
-import { Card, Text, Box, ButtonGroup, Button, InlineStack } from "@shopify/polaris";
-import { useSubmit } from "@remix-run/react";
+import { Card, Text, Box, ButtonGroup, Button, InlineStack, Badge } from "@shopify/polaris";
+import { useFetcher } from "@remix-run/react";
+import type { action as converterAction } from "../app.converter";
 
 export interface Props {
   productId?: string | null;
   imageUrl?: string | null;
   sizeScaleUrl?: string | null;
   statusLabel?: string;
+  onConversionUpdate?: (productId: string, conversionData: any) => void;
 }
 
 const SIZE_ORDER = ["XXS","XS","S","M","L","XL","XXL","XXXL","ONEFIT"] as const;
 
-const Previewer: React.FC<Props> = ({ productId, imageUrl, sizeScaleUrl, statusLabel }) => {
-  const submit = useSubmit();
+const Previewer: React.FC<Props> = ({ productId, imageUrl, sizeScaleUrl, statusLabel, onConversionUpdate }) => {
+  const deleteFetcher = useFetcher<typeof converterAction>();
   const [scaleData, setScaleData] = useState<any | null>(null);
   const [scaleError, setScaleError] = useState<string | null>(null);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+
+  const isDeleting = deleteFetcher.state !== "idle";
+  const statusDisplay = useMemo(() => {
+    if (!statusLabel) return null;
+    const normalized = statusLabel.replace(/_/g, " ");
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  }, [statusLabel]);
+
+  useEffect(() => {
+    const payload = deleteFetcher.data;
+    if (!payload || !onConversionUpdate) return;
+    const { productId: payloadId, conversion } = payload as any;
+    if (!payloadId || !conversion) return;
+    onConversionUpdate(payloadId, conversion);
+  }, [deleteFetcher.data, onConversionUpdate]);
 
   useEffect(() => {
     let aborted = false;
@@ -64,8 +83,86 @@ const Previewer: React.FC<Props> = ({ productId, imageUrl, sizeScaleUrl, statusL
     const fd = new FormData();
     fd.append("intent", "delete");
     fd.append("productId", productId);
-    submit(fd, { method: "post" });
+    deleteFetcher.submit(fd, { method: "post" });
   };
+
+  const renderImage = () => {
+    if (imageError) {
+      return (
+        <Text as="p" variant="bodyMd" tone="critical" alignment="center">
+          {imageError}
+        </Text>
+      );
+    }
+
+    if (imageUrl && !previewSrc) {
+      return (
+        <Text as="p" variant="bodyMd" tone="subdued" alignment="center">
+          Loading preview…
+        </Text>
+      );
+    }
+
+    if (previewSrc) {
+      return (
+        <img
+          src={previewSrc}
+          alt="Processed preview"
+          style={{
+            maxWidth: "240px",
+            width: "100%",
+            height: "auto",
+            borderRadius: 8,
+            display: "block",
+            margin: "0 auto"
+          }}
+        />
+      );
+    }
+
+    return (
+      <Text as="p" variant="bodyMd" alignment="center">
+        {statusLabel || "Your processed garment preview will appear here once ready."}
+      </Text>
+    );
+  };
+
+  useEffect(() => {
+    let revokeUrl: string | null = null;
+    let cancelled = false;
+
+    if (!imageUrl) {
+      setPreviewSrc(null);
+      setImageError(null);
+      return () => {
+        if (revokeUrl) URL.revokeObjectURL(revokeUrl);
+      };
+    }
+
+    setImageError(null);
+    setPreviewSrc(null);
+
+    (async () => {
+      try {
+        const res = await fetch(imageUrl, { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error(`Preview unavailable (HTTP ${res.status})`);
+        }
+        const blob = await res.blob();
+        if (cancelled) return;
+        revokeUrl = URL.createObjectURL(blob);
+        setPreviewSrc(revokeUrl);
+      } catch (err: any) {
+        if (cancelled) return;
+        setImageError(err?.message || "Failed to load preview");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (revokeUrl) URL.revokeObjectURL(revokeUrl);
+    };
+  }, [imageUrl]);
   return (
     <Card>
       <Box padding="300">
@@ -74,7 +171,7 @@ const Previewer: React.FC<Props> = ({ productId, imageUrl, sizeScaleUrl, statusL
             Preview
           </Text>
           <ButtonGroup>
-            <Button variant="primary" tone="critical" onClick={handleDelete} disabled={!productId}>Delete</Button>
+            <Button variant="primary" tone="critical" onClick={handleDelete} disabled={!productId || isDeleting} loading={isDeleting}>Delete</Button>
           </ButtonGroup>
         </InlineStack>
       </Box>
@@ -85,23 +182,12 @@ const Previewer: React.FC<Props> = ({ productId, imageUrl, sizeScaleUrl, statusL
         padding="300"
         borderRadius="200"
       >
-        {imageUrl ? (
-          <img 
-            src={imageUrl} 
-            alt="Preview" 
-            style={{ 
-              maxWidth: "100%", 
-              height: "auto",
-              borderRadius: 8,
-              display: "block",
-              margin: "0 auto"
-            }} 
-          />
-        ) : (
-          <Text as="p" variant="bodyMd" alignment="center">
-            {statusLabel || "Your preview 3D apparel will appear here."}
-          </Text>
+        {statusDisplay && (
+          <Box paddingBlockEnd="200">
+            <Badge tone="subdued">{statusDisplay}</Badge>
+          </Box>
         )}
+        {renderImage()}
       </Box>
 
       {sizeScaleUrl && (
