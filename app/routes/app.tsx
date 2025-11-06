@@ -6,7 +6,7 @@ import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 
 import { authenticate } from "../shopify.server";
-import LoadingPage from "./loadingpage"; 
+import LoadingPage from "./LoadingPage"; 
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
