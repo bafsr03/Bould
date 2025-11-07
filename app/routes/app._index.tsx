@@ -197,12 +197,12 @@ export default function Index() {
           <Box padding="600">
             <InlineStack align="center" gap="400">
               <BlockStack gap="100" inlineAlign="center">
-          <Text as="p" tone="subdued">3D Renders Created</Text>
+          <Text as="p" tone="subdued">Garments Converted</Text>
           <Text variant="headingLg" as="h2">0</Text>
               </BlockStack>
               <BlockStack gap="100" inlineAlign="center">
           <Text as="p" tone="subdued">Apparel Previews</Text>
-          <Text variant="headingLg" as="h2">-</Text>
+          <Text variant="headingLg" as="h2">0</Text>
               </BlockStack>
               <BlockStack gap="100" inlineAlign="center">
           <Text as="p" tone="subdued">Stickers Generated</Text>

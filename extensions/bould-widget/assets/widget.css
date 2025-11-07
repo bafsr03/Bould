@@ -1,23 +1,186 @@
-.bould-widget__open{display:inline-block;padding:10px 14px;border-radius:8px;background:#111;color:#fff;font-weight:600}
-.bould-widget[hidden]{display:none}
-.bould-widget{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px}
-.bould-widget__modal{background:#fff;max-width:720px;width:100%;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.1);padding:20px;position:relative;transform:translateY(0);transition:transform .25s ease,opacity .25s ease}
-.bould-widget__close{position:absolute;top:10px;right:12px;background:transparent;border:none;font-size:22px}
-.bould-widget__screen[hidden]{display:none}
-.bould-widget__actions{display:flex;gap:12px;margin-top:12px}
-.bould-btn{padding:10px 14px;border-radius:8px;background:#111;color:#fff;border:none;cursor:pointer}
-.bould-btn--subtle{background:#F0F1F2;color:#202223}
-.bould-widget__form{display:flex;flex-direction:column;gap:12px}
-.bould-widget__privacy{font-size:12px;color:#6D7175}
-.bould-widget__result-image{display:block;margin:8px auto;width:320px;max-width:90%;height:auto;border-radius:8px;border:1px solid #E1E3E5}
-.bould-widget__size{font-weight:700;font-size:20px;margin:10px 0;text-align:center}
-.bould-widget__confidence{color:#6D7175;font-size:14px;margin:4px 0}
-.bould-widget__feedback{color:#202223;font-size:14px;margin:8px 0;padding:8px;background:#F0F1F2;border-radius:6px}
-.bould-widget__error{color:#D72C0D;background:#FFF4F4;border:1px solid #F5C6CB;padding:10px;border-radius:8px;white-space:pre-wrap}
-@media (max-width: 640px){
-  .bould-widget{align-items:flex-end}
-  .bould-widget__modal{max-width:100%;border-bottom-left-radius:0;border-bottom-right-radius:0}
-  .bould-widget[data-state="opening"] .bould-widget__modal{transform:translateY(20px)}
+.bould-widget-root{
+  --bould-btn-bg: var(--buttons-background, var(--color-button, #111111));
+  --bould-btn-color: var(--buttons-text-color, var(--color-button-text, #ffffff));
+  --bould-btn-radius: var(--buttons-border-radius, 8px);
+  --bould-btn-padding-block: var(--buttons-padding-y, 10px);
+  --bould-btn-padding-inline: var(--buttons-padding-x, 16px);
+  --bould-btn-font-weight: var(--buttons-font-weight, 600);
+  --bould-btn-font-size: var(--buttons-font-size, 16px);
+  --bould-btn-line-height: var(--buttons-line-height, 1.2);
+  --bould-btn-letter-spacing: var(--buttons-letter-spacing, 0);
+  --bould-btn-border-width: var(--buttons-border-width, 0);
+  --bould-btn-border-color: var(--buttons-border-color, transparent);
+  --bould-btn-shadow: var(--buttons-shadow, none);
+  --bould-btn-text-transform: var(--buttons-text-transform, none);
+  --bould-btn-height: var(--buttons-height, auto);
+  --bould-btn-width: var(--buttons-width, 100%);
+  --bould-btn-subtle-bg: var(--buttons-secondary-background, #F0F1F2);
+  --bould-btn-subtle-color: var(--buttons-secondary-text-color, #202223);
+  --bould-btn-subtle-border-color: var(--buttons-secondary-border-color, transparent);
 }
 
+.bould-widget__open,
+.bould-btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: var(--bould-btn-height);
+  width: var(--bould-btn-width);
+  padding-block: var(--bould-btn-padding-block);
+  padding-inline: var(--bould-btn-padding-inline);
+  border-radius: var(--bould-btn-radius);
+  font-weight: var(--bould-btn-font-weight);
+  font-size: var(--bould-btn-font-size);
+  line-height: var(--bould-btn-line-height);
+  letter-spacing: var(--bould-btn-letter-spacing);
+  background: var(--bould-btn-bg);
+  color: var(--bould-btn-color);
+  border: var(--bould-btn-border-width) solid var(--bould-btn-border-color);
+  box-shadow: var(--bould-btn-shadow);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  text-decoration: none;
+  text-transform: var(--bould-btn-text-transform);
+  text-align: center;
+}
+
+.bould-widget__open:focus-visible,
+.bould-btn:focus-visible{
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+.bould-widget__open:hover,
+.bould-btn:hover{
+  filter: brightness(1.05);
+}
+
+.bould-widget__open:active,
+.bould-btn:active{
+  filter: brightness(0.95);
+}
+
+.bould-btn--subtle{
+  background: var(--bould-btn-subtle-bg);
+  color: var(--bould-btn-subtle-color);
+  border-color: var(--bould-btn-subtle-border-color);
+}
+
+.bould-btn--subtle:hover{
+  filter: none;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.bould-widget[hidden]{display:none}
+.bould-widget{
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.bould-widget__modal{
+  background: #ffffff;
+  max-width: 720px;
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  position: relative;
+  transform: translateY(0);
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.bould-widget__close{
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.bould-widget__screen[hidden]{display:none}
+
+.bould-widget__actions{
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.bould-widget__form{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bould-widget__privacy{
+  font-size: 12px;
+  color: #6D7175;
+}
+
+.bould-widget__result-image{
+  display: block;
+  margin: 8px auto;
+  width: 320px;
+  max-width: 90%;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid #E1E3E5;
+}
+
+.bould-widget__size{
+  font-weight: 700;
+  font-size: 20px;
+  margin: 10px 0;
+  text-align: center;
+}
+
+.bould-widget__confidence{
+  color: #6D7175;
+  font-size: 14px;
+  margin: 4px 0;
+}
+
+.bould-widget__feedback{
+  color: #202223;
+  font-size: 14px;
+  margin: 8px 0;
+  padding: 8px;
+  background: #F0F1F2;
+  border-radius: 6px;
+}
+
+.bould-widget__error{
+  color: #D72C0D;
+  background: #FFF4F4;
+  border: 1px solid #F5C6CB;
+  padding: 10px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 640px){
+  .bould-widget{
+    align-items: flex-end;
+  }
+
+  .bould-widget__modal{
+    max-width: 100%;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .bould-widget[data-state="opening"] .bould-widget__modal{
+    transform: translateY(20px);
+  }
+}
 

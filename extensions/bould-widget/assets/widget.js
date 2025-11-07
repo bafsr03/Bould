@@ -38,7 +38,49 @@
       return '';
     }
 
+    function isCustomerLoggedIn(){
+      try{
+        const shopifyCustomer = window.Shopify && window.Shopify.customer;
+        if (shopifyCustomer && (shopifyCustomer.id || shopifyCustomer.email)) {
+          return true;
+        }
+      }catch(e){}
+      try{
+        const analyticsMeta = window.ShopifyAnalytics && window.ShopifyAnalytics.meta;
+        if (analyticsMeta){
+          if (analyticsMeta.page && analyticsMeta.page.customerId) {
+            return true;
+          }
+          if (analyticsMeta.customerId) {
+            return true;
+          }
+        }
+      }catch(e){}
+      try{
+        const cookies = document.cookie ? document.cookie.split(';') : [];
+        for (let i = 0; i < cookies.length; i += 1){
+          const cookie = cookies[i].trim();
+          if (!cookie) continue;
+          const eqIndex = cookie.indexOf('=');
+          if (eqIndex === -1) continue;
+          const name = cookie.slice(0, eqIndex);
+          const value = cookie.slice(eqIndex + 1);
+          if (name === 'customer_signed_in'){
+            const normalized = value.toLowerCase();
+            if (normalized === 'true' || normalized === '1' || normalized === 'yes'){
+              return true;
+            }
+          }
+        }
+      }catch(e){}
+      return false;
+    }
+
     async function open(){
+      if(!isCustomerLoggedIn()){
+        alert('Please log in to test this feature.');
+        return;
+      }
       // Move modal to document.body to ensure full-viewport overlay
       if(!modal.parentElement || modal.parentElement !== document.body){
         document.body.appendChild(modal);

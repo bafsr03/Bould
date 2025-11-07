@@ -6,6 +6,9 @@
   "stylesheet": "widget.css",
   "settings": [
     { "type": "text", "id": "button_label", "label": "Button label", "default": "Find my perfect size" },
+    { "type": "text", "id": "button_classes", "label": "Additional button classes", "info": "Optional theme classes to apply to the launch button (e.g. 'button button--primary')." },
+    { "type": "color", "id": "button_background_color", "label": "Button background color" },
+    { "type": "color", "id": "button_text_color", "label": "Button text color" },
     { "type": "text", "id": "api_base", "label": "API base URL (optional)", "default": "use_app_proxy" }
   ]
 }
@@ -16,12 +19,20 @@
   {% assign featured_image = product.images.first %}
 {% endif %}
 
-<div class="bould-widget-root" data-bould-widget data-block-id="{{ block.id }}" data-api-base="{{ block.settings.api_base }}" data-product-id="{{ product.admin_graphql_api_id }}" {% if featured_image != blank %}data-product-image="{{ featured_image | image_url: width: 2048 }}"{% endif %}>
-  <button class="bould-widget__open">{{ block.settings.button_label }}</button>
+{% capture widget_style %}
+  {% if block.settings.button_background_color != blank %}--bould-btn-bg: {{ block.settings.button_background_color }};{% endif %}
+  {% if block.settings.button_text_color != blank %}--bould-btn-color: {{ block.settings.button_text_color }};{% endif %}
+{% endcapture %}
+{% assign widget_style = widget_style | strip | strip_newlines %}
+
+{% assign extra_button_classes = block.settings.button_classes | strip %}
+
+<div class="bould-widget-root" data-bould-widget data-block-id="{{ block.id }}" data-api-base="{{ block.settings.api_base }}" data-product-id="{{ product.admin_graphql_api_id }}" {% if featured_image != blank %}data-product-image="{{ featured_image | image_url: width: 2048 }}"{% endif %}{% if widget_style != blank %} style="{{ widget_style }}"{% endif %}>
+  <button type="button" class="bould-widget__open bould-btn{% if extra_button_classes != blank %} {{ extra_button_classes }}{% endif %}">{{ block.settings.button_label }}</button>
 
   <div class="bould-widget" role="dialog" aria-modal="true" hidden>
     <div class="bould-widget__modal">
-      <button class="bould-widget__close" aria-label="Close">×</button>
+      <button type="button" class="bould-widget__close" aria-label="Close">×</button>
 
     <div class="bould-widget__screen bould-widget__screen--intro" data-screen="intro">
       <h3>How it works</h3>
@@ -31,8 +42,8 @@
         <li>Get your size</li>
       </ol>
       <div class="bould-widget__actions">
-        <button data-action="close" class="bould-btn bould-btn--subtle">Go back</button>
-        <button data-action="continue" class="bould-btn">Continue</button>
+        <button type="button" data-action="close" class="bould-btn bould-btn--subtle">Go back</button>
+        <button type="button" data-action="continue" class="bould-btn">Continue</button>
       </div>
     </div>
 
@@ -57,7 +68,7 @@
       <p class="bould-widget__confidence"></p>
       <p class="bould-widget__feedback"></p>
       <div class="bould-widget__actions">
-        <button data-action="close" class="bould-btn">Done</button>
+        <button type="button" data-action="close" class="bould-btn">Done</button>
       </div>
     </div>
 
@@ -65,7 +76,7 @@
       <h3>Something went wrong</h3>
       <pre class="bould-widget__error"></pre>
       <div class="bould-widget__actions">
-        <button data-action="back-to-form" class="bould-btn">Try again</button>
+        <button type="button" data-action="back-to-form" class="bould-btn">Try again</button>
       </div>
     </div>
     </div>
