@@ -24,9 +24,32 @@ import {
   ChatIcon,
   EnvelopeSoftPackIcon,
 } from "@shopify/polaris-icons";
-import { Link as RemixLink} from "@remix-run/react";
-import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
+import { Link as RemixLink, useLoaderData } from "@remix-run/react";
+import { json, type ActionFunctionArgs, type LoaderFunctionArgs, type MetaFunction } from "@remix-run/node";
+import prisma from "../db.server";
 import { authenticate } from "../shopify.server";
+
+type LoaderData = {
+  usage: {
+    garmentsConverted: number;
+    apparelPreviews: number;
+    stickersGenerated: number;
+  };
+};
+
+const numberFormatter = new Intl.NumberFormat("en-US");
+
+function startOfDay(date: Date) {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+function addDays(date: Date, days: number) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
 
 export const meta: MetaFunction = () => ([
   { title: "Welcome to Bould | Pioneering the Future of Online Shopping" },
@@ -35,7 +58,44 @@ export const meta: MetaFunction = () => ([
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
-  return null;
+
+  const now = new Date();
+  const windowStart = startOfDay(addDays(now, -6));
+  const windowEnd = addDays(startOfDay(now), 1);
+
+  let garmentsConverted = 0;
+  let apparelPreviews = 0;
+
+  try {
+    const [convertedCount, widgetEventCount] = await Promise.all([
+      prisma.conversion.count({
+        where: {
+          processed: true,
+          status: "completed",
+          updatedAt: { gte: windowStart, lt: windowEnd },
+        },
+      }),
+      (prisma as any).widgetEvent.count({
+        where: {
+          createdAt: { gte: windowStart, lt: windowEnd },
+          conversion: { processed: true, status: "completed" },
+        },
+      }),
+    ]);
+
+    garmentsConverted = convertedCount;
+    apparelPreviews = widgetEventCount;
+  } catch (error) {
+    console.error("[HOME] Failed to load usage summary", error);
+  }
+
+  return json<LoaderData>({
+    usage: {
+      garmentsConverted,
+      apparelPreviews,
+      stickersGenerated: 0,
+    },
+  });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -57,6 +117,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Index() {
+  const { usage } = useLoaderData<typeof loader>();
+  const formatMetric = (value: number | null | undefined) =>
+    value == null ? "-" : numberFormatter.format(value);
+
   const handleDismiss = () => console.log("Banner dismissed");
   const handleSelectChange = (value: string) => console.log("Select changed to:", value);
 
@@ -198,15 +262,15 @@ export default function Index() {
             <InlineStack align="center" gap="400">
               <BlockStack gap="100" inlineAlign="center">
           <Text as="p" tone="subdued">Garments Converted</Text>
-          <Text variant="headingLg" as="h2">0</Text>
+          <Text variant="headingLg" as="h2">{formatMetric(usage.garmentsConverted)}</Text>
               </BlockStack>
               <BlockStack gap="100" inlineAlign="center">
           <Text as="p" tone="subdued">Apparel Previews</Text>
-          <Text variant="headingLg" as="h2">0</Text>
+          <Text variant="headingLg" as="h2">{formatMetric(usage.apparelPreviews)}</Text>
               </BlockStack>
               <BlockStack gap="100" inlineAlign="center">
           <Text as="p" tone="subdued">Stickers Generated</Text>
-          <Text variant="headingLg" as="h2">-</Text>
+          <Text variant="headingLg" as="h2">{formatMetric(usage.stickersGenerated)}</Text>
               </BlockStack>
             </InlineStack>
           </Box>
