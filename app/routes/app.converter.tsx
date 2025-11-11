@@ -8,6 +8,7 @@ import {
   Box,
   Link,
   Card,
+  Banner,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 
@@ -17,10 +18,17 @@ import type { Props as PreviewerProps } from "./converterComponents/PreviewerPan
 import ProductDetails from "./converterComponents/ProductDetails";
 
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
+import type { BillingPlanId } from "../billing/plans";
+import { getPlanForShop } from "../billing/plan.server";
+import {
+  getApparelPreviewUsage,
+  type ApparelPreviewUsage,
+  isApparelPreviewLimitExceeded,
+} from "../billing/usage.server";
 
 type ConversionStatus = "pending" | "processing" | "completed" | "failed";
 
@@ -42,15 +50,24 @@ type ConversionState = {
   trueSize?: string | null;
   unit?: string | null;
   trueWaist?: string | null;
+  deactivated?: boolean;
 };
 
 type LoaderData = {
   products: ShopifyProduct[];
   states: Record<string, ConversionState>; // keyed by product id
+  plan: {
+    id: BillingPlanId;
+    name: string;
+    apparelPreviewLimit: number | null;
+    apparelPreviewLimitExceeded: boolean;
+  };
+  apparelUsage: ApparelPreviewUsage;
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin } = await authenticate.admin(request);
+  const { admin, billing, session } = await authenticate.admin(request);
+  const shopDomain = session?.shop ?? null;
 
   const resp = await admin.graphql(
     `#graphql
@@ -110,12 +127,62 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         };
   }
 
-  return json<LoaderData>({ products, states });
+  const planContext = await getPlanForShop({ billing, shopDomain });
+  const apparelUsage = await getApparelPreviewUsage(shopDomain);
+  const apparelLimitExceeded = isApparelPreviewLimitExceeded(
+    planContext.plan,
+    apparelUsage
+  );
+
+  if (apparelLimitExceeded) {
+    for (const key of Object.keys(states)) {
+      const current = states[key];
+      states[key] = {
+        ...current,
+        status: "deactivated",
+        processed: false,
+        deactivated: true,
+      };
+    }
+  }
+
+  return json<LoaderData>({
+    products,
+    states,
+    plan: {
+      id: planContext.planId,
+      name: planContext.plan.name,
+      apparelPreviewLimit: planContext.plan.capabilities.apparelPreviewLimit ?? null,
+      apparelPreviewLimitExceeded: apparelLimitExceeded,
+    },
+    apparelUsage,
+  });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
   const intent = String(formData.get("intent") || "");
+  const { billing, session } = await authenticate.admin(request);
+  const shopDomain = session?.shop ?? null;
+
+  if (intent !== "delete") {
+    const planContext = await getPlanForShop({ billing, shopDomain });
+    const apparelUsage = await getApparelPreviewUsage(shopDomain);
+    const apparelLimitExceeded = isApparelPreviewLimitExceeded(
+      planContext.plan,
+      apparelUsage
+    );
+
+    if (apparelLimitExceeded) {
+      return json(
+        {
+          error:
+            "Apparel previews limit exceeded for your current plan. Upgrade to resume garment conversions.",
+        },
+        { status: 403 }
+      );
+    }
+  }
 
   if (intent === "convert") {
     const productId = String(formData.get("productId") || "");
@@ -135,12 +202,33 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       console.log(`[CONVERTER] Updating existing conversion record: ${existing.id}`);
       await (prisma as any).conversion.update({
         where: { id: existing.id },
-        data: { status: "processing", processed: false, title: productTitle, imageUrl, categoryId: parseInt(categoryId, 10), trueSize, unit, trueWaist },
+        data: {
+          status: "processing",
+          processed: false,
+          title: productTitle,
+          imageUrl,
+          categoryId: parseInt(categoryId, 10),
+          trueSize,
+          unit,
+          trueWaist,
+          shopDomain: shopDomain ?? existing.shopDomain ?? null,
+        },
       });
     } else {
       console.log(`[CONVERTER] Creating new conversion record for product: ${productId}`);
       await (prisma as any).conversion.create({
-        data: { shopifyProductId: productId, title: productTitle, imageUrl, categoryId: parseInt(categoryId, 10), trueSize, unit, trueWaist, status: "processing", processed: false },
+        data: {
+          shopifyProductId: productId,
+          title: productTitle,
+          imageUrl,
+          categoryId: parseInt(categoryId, 10),
+          trueSize,
+          unit,
+          trueWaist,
+          status: "processing",
+          processed: false,
+          shopDomain: shopDomain ?? null,
+        },
       });
     }
 
@@ -345,23 +433,36 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function ConverterPage() {
-  const { products, states } = useLoaderData<LoaderData>();
+  const { products, states, plan, apparelUsage } = useLoaderData<LoaderData>();
   const [selected, setSelected] = useState<ShopifyProduct | null>(null);
   const [conversionStates, setConversionStates] = useState<Record<string, ConversionState>>(states);
 
-  const handleConversionUpdate = useCallback((productId: string, conversionData: Partial<ConversionState>) => {
-    setConversionStates(prev => ({
+  useEffect(() => {
+    setConversionStates(states);
+  }, [states]);
+
+  const handleConversionUpdate = useCallback(
+    (productId: string, conversionData: Partial<ConversionState>) => {
+      setConversionStates((prev) => ({
       ...prev,
       [productId]: {
         ...prev[productId],
-        ...conversionData
-      }
+          ...conversionData,
+        },
     }));
-  }, []);
+    },
+    []
+  );
+
+  const conversionDisabled = plan.apparelPreviewLimitExceeded;
+  const conversionDisabledMessage =
+    conversionDisabled && plan.apparelPreviewLimit
+      ? `The ${plan.name} plan allows ${plan.apparelPreviewLimit} apparel previews. You have recorded ${apparelUsage.total}. Upgrade your plan to continue converting garments.`
+      : "Upgrade your plan to continue converting garments.";
 
   return (
     <Page>
-      <TitleBar title="Bould" />
+      <TitleBar title="Bould Converter" />
 
       <Layout>
         <Layout.Section>
@@ -373,10 +474,19 @@ export default function ConverterPage() {
               secondaryAction={{ content: "Watch Tutorial" }}
             >
               <p>
-                To upload your design, drag and drop into the drop zone or click "Upload."
+                To upload your design, drag and drop into the drop zone or click &quot;Upload.&quot;
               </p>
             </CalloutCard>
           </Box>
+
+          {conversionDisabled && (
+            <Box paddingBlockStart="400">
+              <Banner tone="critical" title="Garments paused">
+                <p>{conversionDisabledMessage}</p>
+                <Link url="/app/pricing">Upgrade plan</Link>
+              </Banner>
+            </Box>
+          )}
 
           <Box paddingBlockStart="400">
             <Layout>
@@ -387,6 +497,8 @@ export default function ConverterPage() {
               selected={selected}
               status={selected ? conversionStates[selected.id] : undefined}
               onConversionUpdate={handleConversionUpdate}
+                      conversionDisabled={conversionDisabled}
+                      disabledMessage={conversionDisabledMessage}
             />
           </Box>
                 </Card>
@@ -396,9 +508,9 @@ export default function ConverterPage() {
                 {(() => {
                   const previewerProps: PreviewerProps = {
                     productId: selected?.id || null,
-            imageUrl: selected ? (conversionStates[selected.id]?.previewImageUrl ?? null) : null,
-                    sizeScaleUrl: selected ? (conversionStates[selected.id]?.sizeScaleUrl ?? null) : null,
-            statusLabel: selected ? `${conversionStates[selected.id]?.status || 'pending'}` : undefined,
+                    imageUrl: selected ? conversionStates[selected.id]?.previewImageUrl ?? null : null,
+                    sizeScaleUrl: selected ? conversionStates[selected.id]?.sizeScaleUrl ?? null : null,
+                    statusLabel: selected ? `${conversionStates[selected.id]?.status || "pending"}` : undefined,
             onConversionUpdate: handleConversionUpdate,
                   };
                   return <Previewer {...previewerProps} />;
@@ -408,7 +520,13 @@ export default function ConverterPage() {
           </Box>
 
         <Box paddingBlockStart="600">
-          <LibraryTable products={products} states={conversionStates} onSelect={setSelected} selectedProductId={selected?.id} />
+            <LibraryTable
+              products={products}
+              states={conversionStates}
+              onSelect={setSelected}
+              selectedProductId={selected?.id}
+              conversionDisabled={conversionDisabled}
+            />
           </Box>
         </Layout.Section>
       </Layout>

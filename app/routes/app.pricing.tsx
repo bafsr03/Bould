@@ -15,8 +15,78 @@ import {
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { CheckIcon } from "@shopify/polaris-icons";
+import { json, type LoaderFunctionArgs } from "@remix-run/node";
+import { Form, useLoaderData, useSearchParams } from "@remix-run/react";
+import {
+  APP_PLANS,
+  type BillingPlanId,
+} from "../billing/plans";
+import { authenticate } from "../shopify.server";
+import { getPlanForShop } from "../billing/plan.server";
+import {
+  getApparelPreviewUsage,
+  isApparelPreviewLimitExceeded,
+} from "../billing/usage.server";
+
+type LoaderData = {
+  activePlanId: BillingPlanId;
+  planName: string;
+  apparelPreviewLimit: number | null;
+  apparelPreviewLimitExceeded: boolean;
+};
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { billing, session } = await authenticate.admin(request);
+  const shopDomain = session?.shop ?? null;
+
+  const planContext = await getPlanForShop({ billing, shopDomain });
+  const usage = await getApparelPreviewUsage(shopDomain);
+  const apparelLimitExceeded = isApparelPreviewLimitExceeded(
+    planContext.plan,
+    usage
+  );
+
+  return json<LoaderData>({
+    activePlanId: planContext.planId,
+    planName: planContext.plan.name,
+    apparelPreviewLimit: planContext.plan.capabilities.apparelPreviewLimit ?? null,
+    apparelPreviewLimitExceeded: apparelLimitExceeded,
+  });
+};
 
 export default function PricingPage() {
+  const { activePlanId, apparelPreviewLimit, apparelPreviewLimitExceeded } =
+    useLoaderData<typeof loader>();
+  const [searchParams] = useSearchParams();
+  const status = searchParams.get("status");
+
+  const statusBanner =
+    status === "upgraded" ? (
+      <Banner tone="success" onDismiss={() => {}}>
+        <p>
+          Thanks! Shopify is opening to confirm your purchase. You&apos;ll land back here when the
+          upgrade is complete.
+        </p>
+      </Banner>
+    ) : status === "starter" ? (
+      <Banner tone="info" onDismiss={() => {}}>
+        <p>Your paid subscription has been cancelled. You&apos;re now on the Starter plan.</p>
+      </Banner>
+    ) : status === "analytics-upgrade" ? (
+      <Banner tone="warning" onDismiss={() => {}}>
+        <p>Analytics are available on Creator and Pro plans. Upgrade to unlock advanced reporting.</p>
+      </Banner>
+    ) : null;
+
+  const overageBanner =
+    apparelPreviewLimitExceeded && apparelPreviewLimit ? (
+      <Banner tone="critical" onDismiss={() => {}}>
+        <p>
+          You&apos;ve reached the Starter plan limit of {apparelPreviewLimit} apparel previews. Garments are paused in the widget until you upgrade.
+        </p>
+      </Banner>
+    ) : null;
+
   return (
     <Page>
       <TitleBar title="Bould" />
@@ -39,38 +109,14 @@ export default function PricingPage() {
                 <Text variant="bodyLg" as="p" fontWeight="medium">
                   10,000{" "}
                   <Text as="span" tone="subdued">
-                    unique visitors / 30 days
+                    unique visitors per month
                   </Text>
                 </Text>
                 <Text as="p" tone="subdued">
                   If you exceed your limit, Bould will pause your free plan
                 </Text>
-                <Box
-                  background="bg-surface-secondary"
-                  
-                  borderRadius="200"
-                  borderColor="border"
-                  borderWidth="050"
-                  paddingBlockStart="200"
-                  paddingBlockEnd="200"
-                >
-                  <Text tone="subdued" as="h4">
-                    You've had 0 unique visitors in the last day (equivalent to
-                    0 over 30 days).
-                  </Text>
-                </Box>
-                <Banner tone="warning" onDismiss={() => {}}>
-                  <p>
-                    You have reached your free limit of stickers.{" "}
-                    <Link url="">Please choose a plan to continue.</Link>
-                  </p>
-                </Banner>
-                <Banner tone="warning" onDismiss={() => {}}>
-                  <p>
-                    You have reached your free limit of 3D conversions.{" "}
-                    <Link url="">Please choose a plan to continue.</Link>
-                  </p>
-                </Banner>
+                {overageBanner}
+                {statusBanner}
               </BlockStack>
             </Box>
 
@@ -85,8 +131,11 @@ export default function PricingPage() {
                   <Link url="mailto:support@bould.ai">Chat with us.</Link>
                 </Text>
 
+
                 <InlineGrid columns={{ xs: 1, sm: 2, md: 3 }} gap="300">
-                  {plans.map((plan) => (
+                  {APP_PLANS.map((plan) => {
+                    const isActivePlan = plan.id === activePlanId;
+                    return (
                     <Box
                       key={plan.name}
                       background="bg-surface-secondary"
@@ -112,38 +161,49 @@ export default function PricingPage() {
                               <Text variant="headingSm" as="h3">
                                 {plan.name}
                               </Text>
+                              <InlineStack gap="100">
+                                {isActivePlan && (
+                                  <Badge tone="success">Current plan</Badge>
+                                )}
                               {plan.recommended && (
                                 <Badge tone="info">Recommended</Badge>
                               )}
+                              </InlineStack>
                             </InlineStack>
 
                             <Text as="h2" variant="headingLg">
-                              {plan.price}
+                              {plan.priceLabel}
                               <Text as="span" variant="bodyMd" tone="subdued">
                                 {" "}
                                 / month
                               </Text>
                             </Text>
 
-                            {plan.trial && (
-                              <Text variant="bodySm" tone="subdued" as="h4">
-                                {plan.trial}
-                              </Text>
-                            )}
-
                             <BlockStack gap="100">
                               {plan.features.map((feature, idx) => (
-                                <InlineStack
+                                <div
                                   key={idx}
-                                  align="start"
-                                  blockAlign="center"
-                                  gap="100"
+                                  style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "min-content 1fr",
+                                    columnGap: "var(--p-space-100)",
+                                    alignItems: "start",
+                                  }}
                                 >
-                                  <Box minWidth="20px">
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "flex-start",
+                                      justifyContent: "center",
+                                      width: "20px",
+                                    }}
+                                  >
                                     <Icon source={CheckIcon} tone="success" />
-                                  </Box>
-                                  <Text as="h4">{feature}</Text>
-                                </InlineStack>
+                                  </div>
+                                  <div style={{ wordBreak: "break-word" }}>
+                                    <Text as="h4">{feature}</Text>
+                                  </div>
+                                </div>
                               ))}
                             </BlockStack>
                           </BlockStack>
@@ -152,14 +212,23 @@ export default function PricingPage() {
                         <div style={{ marginTop: "auto", paddingTop: "20px" }}>
                           <Divider />
                           <Box paddingBlockStart="100">
-                            <Button variant="primary" fullWidth>
-                              {plan.cta}
+                            <Form method="post" action="/app/upgrade">
+                              <input type="hidden" name="plan" value={plan.id} />
+                              <Button
+                                variant="primary"
+                                fullWidth
+                                submit
+                                disabled={isActivePlan}
+                              >
+                                {isActivePlan ? "Current plan" : plan.cta}
                             </Button>
+                            </Form>
                           </Box>
                         </div>
                       </div>
                     </Box>
-                  ))}
+                    );
+                  })}
                 </InlineGrid>
               </BlockStack>
             </Box>
@@ -213,44 +282,3 @@ export default function PricingPage() {
     </Page>
   );
 }
-
-const plans = [
-  {
-    name: "Starter",
-    price: "Free",
-    trial: "14-day free trial (13 days remaining)",
-    features: [
-      "Limited AI sticker usage",
-      "Access to limited Try-On ",
-      "AR Try-On included (5 models/month)",
-    ],
-    cta: "Choose plan",
-    recommended: false,
-  },
-  {
-    name: "Creator",
-    price: "$20",
-    trial: "14-day free trial (13 days remaining)",
-    features: [
-      "Unlimited AI sticker generation",
-      "Full access to Blanks Design Lab",
-      "Standard creator support",
-      "AR Try-On included (50 models/month)",
-    ],
-    cta: "Choose plan",
-    recommended: false,
-  },
-  {
-    name: "Pro",
-    price: "$50",
-    trial: "30-day free trial (29 days remaining)",
-    features: [
-      "AR Try-On included (unlimmited models)",
-      "Unlimited Blanks + Stickers",
-      "Priority support & asset delivery",
-      "35% off on all blanks and stickers",
-    ],
-    cta: "Choose plan",
-    recommended: true,
-  },
-];

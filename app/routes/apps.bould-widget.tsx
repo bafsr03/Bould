@@ -2,6 +2,11 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { unauthenticated } from "../shopify.server";
 import prisma from "../db.server";
+import { getPlanForShop } from "../billing/plan.server";
+import {
+  getApparelPreviewUsage,
+  isApparelPreviewLimitExceeded,
+} from "../billing/usage.server";
 
 // Enhanced logging function
 function logRequest(method: string, path: string, status: number, duration: number, details?: any) {
@@ -16,6 +21,8 @@ function logError(error: any, context: string, details?: any) {
     console.error('Stack trace:', error.stack);
   }
 }
+
+const UPGRADE_WIDGET_MESSAGE = "Upgrade to continue using Bould.";
 
 // Enforce required env in production
 const RECOMMENDER_BASE = (process.env.RECOMMENDER_BASE_URL || process.env.RECOMMENDER_URL || '').trim();
@@ -100,12 +107,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const url = new URL(request.url);
     const intent = url.searchParams.get('intent');
     const productId = url.searchParams.get('product_id');
+    const shopDomain = url.searchParams.get('shop') || undefined;
 
     // Preflight status check for storefront widget
     if (intent === 'status') {
       if (!productId) {
         logRequest('GET', '/apps/bould-widget', 400, Date.now() - startTime, { requestId, error: 'Missing product ID (status preflight)' });
         return json({ error: 'Product ID is required', debug: { requestId } }, { status: 400, headers: { 'X-Correlation-ID': request.headers.get('X-Correlation-ID') || requestId } });
+      }
+      if (!shopDomain) {
+        logRequest('GET', '/apps/bould-widget', 400, Date.now() - startTime, { requestId, error: 'Missing shop domain (status preflight)' });
+        return json({ error: 'Shop domain is required', debug: { requestId } }, { status: 400, headers: { 'X-Correlation-ID': request.headers.get('X-Correlation-ID') || requestId } });
       }
 
       let isGarmentProcessed = false;
@@ -121,11 +133,35 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         conversionStatus = 'database_error';
       }
 
+      const planContext = await getPlanForShop({ shopDomain });
+      let planBlocked = false;
+      let planMessage: string | null = null;
+      let apparelLimit = planContext.plan.capabilities.apparelPreviewLimit ?? null;
+
+      if (shopDomain && apparelLimit != null) {
+        try {
+          const apparelUsage = await getApparelPreviewUsage(shopDomain);
+          planBlocked = isApparelPreviewLimitExceeded(planContext.plan, apparelUsage);
+          if (planBlocked) {
+            planMessage = UPGRADE_WIDGET_MESSAGE;
+          }
+        } catch (usageError) {
+          logError(usageError, 'widget loader usage', { requestId, shopDomain });
+        }
+      }
+
       const payload = {
         ok: true,
         productId,
         isProcessed: isGarmentProcessed,
         conversionStatus,
+        plan: {
+          id: planContext.planId,
+          name: planContext.plan.name,
+          blocked: planBlocked,
+          message: planMessage,
+          apparelPreviewLimit: apparelLimit,
+        },
         debug: { requestId }
       };
 
@@ -227,6 +263,46 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         error: "Product ID is required",
         debug: { requestId }
       }, { status: 400 });
+    }
+    if (!shopDomain) {
+      logRequest('POST', '/apps/bould-widget', 400, Date.now() - startTime, {
+        requestId,
+        error: 'Missing shop domain'
+      });
+      return json({
+        error: "Shop domain is required",
+        debug: { requestId }
+      }, { status: 400 });
+    }
+
+    const planContext = await getPlanForShop({ shopDomain });
+    const apparelLimit = planContext.plan.capabilities.apparelPreviewLimit ?? null;
+    if (shopDomain && apparelLimit != null) {
+      try {
+        const apparelUsage = await getApparelPreviewUsage(shopDomain);
+        const planBlocked = isApparelPreviewLimitExceeded(planContext.plan, apparelUsage);
+        if (planBlocked) {
+          const message = UPGRADE_WIDGET_MESSAGE;
+          return json(
+            {
+              error: message,
+              debug: {
+                requestId,
+                shopDomain,
+                planId: planContext.planId,
+                apparelPreviewLimit: apparelLimit,
+                apparelPreviewsUsed: apparelUsage.total,
+              },
+            },
+            {
+              status: 409,
+              headers: { 'X-Correlation-ID': clientCorrelationId || requestId },
+            }
+          );
+        }
+      } catch (usageError) {
+        logError(usageError, 'widget action usage', { requestId, shopDomain });
+      }
     }
 
     // Check if garment has been processed using real database check

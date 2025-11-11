@@ -35,9 +35,17 @@ interface Props {
     trueWaist?: string | null;
   } | null;
   onConversionUpdate?: (productId: string, conversionData: any) => void;
+  conversionDisabled?: boolean;
+  disabledMessage?: string;
 }
 
-export default function ControlsPanel({ selected, status, onConversionUpdate }: Props) {
+export default function ControlsPanel({
+  selected,
+  status,
+  onConversionUpdate,
+  conversionDisabled = false,
+  disabledMessage,
+}: Props) {
   const convertFetcher = useFetcher<typeof converterAction>();
   const [selectedCategory, setSelectedCategory] = useState("1");
   const [trueSize, setTrueSize] = useState("M");
@@ -130,7 +138,7 @@ export default function ControlsPanel({ selected, status, onConversionUpdate }: 
     setTrueWaist(status?.trueWaist ?? "50");
   }, [selected?.id, status?.categoryId, status?.trueSize, status?.unit, status?.trueWaist]);
 
-  const submitDisabled = !selected || isConverting;
+  const submitDisabled = !selected || isConverting || conversionDisabled;
 
   return (
     <BlockStack gap="400">
@@ -206,8 +214,17 @@ export default function ControlsPanel({ selected, status, onConversionUpdate }: 
             disabled={submitDisabled}
             loading={isConverting}
           >
-            {isConverting ? "Converting..." : "Convert"}
+            {conversionDisabled
+              ? "Conversion paused"
+              : isConverting
+              ? "Converting..."
+              : "Convert"}
           </Button>
+          {conversionDisabled && disabledMessage && (
+            <Text as="p" tone="critical">
+              {disabledMessage}
+            </Text>
+          )}
         </BlockStack>
       )}
     </BlockStack>

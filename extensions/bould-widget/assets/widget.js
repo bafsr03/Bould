@@ -4,6 +4,107 @@
     const openBtn = container.querySelector('.bould-widget__open');
     const modal = container.querySelector('.bould-widget');
     const closeBtn = container.querySelector('.bould-widget__close');
+    let statusPromise = null;
+    let lastStatusPayload = null;
+
+    function getEndpointBase(){
+      const base = container.getAttribute('data-api-base');
+      if (base && base !== 'use_app_route' && base !== 'use_app_proxy') {
+        return base;
+      }
+      return '/apps/bould';
+    }
+
+    function ensureUpgradeNotice(){
+      let notice = container.querySelector('.bould-widget__upgrade');
+      if (!notice) {
+        notice = document.createElement('div');
+        notice.className = 'bould-widget__upgrade';
+        container.appendChild(notice);
+      }
+      return notice;
+    }
+
+    function applyPlanState(payload){
+      lastStatusPayload = payload || null;
+      const plan = payload && payload.plan ? payload.plan : null;
+      const blocked = !!(plan && plan.blocked);
+      const existingNotice = container.querySelector('.bould-widget__upgrade');
+
+      if (blocked) {
+        const message =
+          plan.message ||
+          'Upgrade your Bould plan to continue offering size recommendations.';
+        const notice = existingNotice || ensureUpgradeNotice();
+        notice.textContent = message;
+        notice.hidden = false;
+        container.setAttribute('data-plan-blocked', 'true');
+
+        if (openBtn) {
+          openBtn.disabled = true;
+          openBtn.classList.add('bould-widget__open--disabled');
+          openBtn.style.display = 'none';
+          openBtn.setAttribute('data-disabled-reason', 'plan-blocked');
+          openBtn.setAttribute('title', message);
+          openBtn.setAttribute('aria-disabled', 'true');
+        }
+      } else {
+        container.removeAttribute('data-plan-blocked');
+        if (existingNotice) {
+          existingNotice.textContent = '';
+          existingNotice.hidden = true;
+        }
+        if (openBtn) {
+          openBtn.style.display = '';
+          openBtn.disabled = false;
+          openBtn.classList.remove('bould-widget__open--disabled');
+          openBtn.removeAttribute('data-disabled-reason');
+          openBtn.removeAttribute('title');
+          openBtn.removeAttribute('aria-disabled');
+        }
+      }
+    }
+
+    async function fetchStatusPayload(){
+      const productId = getProductId();
+      if (!productId) {
+        return null;
+      }
+      const correlationId = Math.random().toString(36).slice(2, 10);
+      const statusUrl = `${getEndpointBase()}?intent=status&product_id=${encodeURIComponent(productId)}`;
+      const res = await fetch(statusUrl, {
+        headers: {
+          'Accept': 'application/json',
+          'X-Correlation-ID': correlationId
+        }
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        console.warn('[Bould Widget] Status check failed', res.status, text);
+        return null;
+      }
+      return res.json();
+    }
+
+    async function ensurePlanStatus(){
+      if (statusPromise) {
+        return statusPromise;
+      }
+      statusPromise = (async () => {
+        try {
+          const payload = await fetchStatusPayload();
+          applyPlanState(payload);
+          return payload;
+        } catch (error) {
+          console.warn('[Bould Widget] Failed to determine plan status', error);
+          applyPlanState(null);
+          return null;
+        } finally {
+          statusPromise = null;
+        }
+      })();
+      return statusPromise;
+    }
 
     function showScreen(name){
       modal.querySelectorAll('.bould-widget__screen').forEach(function(s){
@@ -81,6 +182,12 @@
         alert('Please log in to test this feature.');
         return;
       }
+
+      const preflight = await ensurePlanStatus();
+      if (preflight && preflight.plan && preflight.plan.blocked) {
+        return;
+      }
+
       // Move modal to document.body to ensure full-viewport overlay
       if(!modal.parentElement || modal.parentElement !== document.body){
         document.body.appendChild(modal);
@@ -88,26 +195,14 @@
       modal.hidden = false;
       modal.setAttribute('data-state','opening');
 
-      // Preflight: check garment processed status immediately
-      try{
-        const base = container.getAttribute('data-api-base');
+      if(preflight){
         const productId = getProductId();
-        const correlationId = Math.random().toString(36).slice(2, 10);
-        const endpointBase = base && base !== 'use_app_route' && base !== 'use_app_proxy' ? base : '/apps/bould';
-        const statusUrl = productId ? `${endpointBase}?intent=status&product_id=${encodeURIComponent(productId)}` : `${endpointBase}?intent=status`;
-        const res = await fetch(statusUrl, { headers: { 'Accept': 'application/json', 'X-Correlation-ID': correlationId } });
-        if(res.ok){
-          const data = await res.json();
-          if(!data.isProcessed){
-            // Show immediate message if not processed
-            const msg = data.conversionStatus === 'processing'
-              ? 'This garment is currently being processed. Please wait a few minutes and try again.'
-              : "This garment hasn't been edited.";
-            return showError(msg, { requestId: data?.debug?.requestId, productId, conversionStatus: data.conversionStatus });
-          }
+        if(!preflight.isProcessed){
+          const msg = preflight.conversionStatus === 'processing'
+            ? 'This garment is currently being processed. Please wait a few minutes and try again.'
+            : "This garment hasn't been edited.";
+          return showError(msg, { requestId: preflight?.debug?.requestId, productId, conversionStatus: preflight.conversionStatus });
         }
-      } catch(e){
-        // Ignore preflight errors; continue to intro
       }
 
       showScreen('intro');
@@ -148,10 +243,9 @@
         showScreen('loading');
         try{
           // Determine endpoint: app proxy or absolute API base from settings
-          const base = container.getAttribute('data-api-base');
           const productId = getProductId();
           const correlationId = Math.random().toString(36).slice(2, 10);
-          const endpointBase = base && base !== 'use_app_route' && base !== 'use_app_proxy' ? base : '/apps/bould';
+          const endpointBase = getEndpointBase();
           const endpoint = productId ? `${endpointBase}?product_id=${encodeURIComponent(productId)}` : endpointBase;
           
           // Add request debugging
@@ -351,6 +445,9 @@
           }
           
           showError(message, err.debugInfo);
+          if (err && err.statusCode === 409) {
+            ensurePlanStatus();
+          }
         }
       });
     }
@@ -384,6 +481,7 @@
       pre.innerHTML = errorHTML;
       showScreen('error');
     }
+    ensurePlanStatus();
   });
 })();
 

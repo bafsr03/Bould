@@ -42,6 +42,7 @@ model Conversion {
   processed       Boolean  @default(false)
   previewImageUrl String?
   sizeScaleUrl    String?
+  shopDomain      String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   widgetEvents    WidgetEvent[]
@@ -61,4 +62,16 @@ model WidgetEvent {
 
   @@index([shopifyProductId])
   @@index([createdAt])
+}
+
+model ShopPlan {
+  id                     String   @id @default(cuid())
+  shopDomain             String   @unique
+  planId                 String
+  billingKey             String?
+  hasActivePayment       Boolean  @default(false)
+  activeSubscriptionId   String?
+  activeSubscriptionName String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 }

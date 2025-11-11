@@ -25,15 +25,33 @@ import {
   EnvelopeSoftPackIcon,
 } from "@shopify/polaris-icons";
 import { Link as RemixLink, useLoaderData } from "@remix-run/react";
-import { json, type ActionFunctionArgs, type LoaderFunctionArgs, type MetaFunction } from "@remix-run/node";
+import {
+  json,
+  type ActionFunctionArgs,
+  type LoaderFunctionArgs,
+  type MetaFunction,
+} from "@remix-run/node";
 import prisma from "../db.server";
 import { authenticate } from "../shopify.server";
+import { type BillingPlanId } from "../billing/plans";
+import { getPlanForShop } from "../billing/plan.server";
+import {
+  getApparelPreviewUsage,
+  isApparelPreviewLimitExceeded,
+} from "../billing/usage.server";
 
 type LoaderData = {
   usage: {
     garmentsConverted: number;
     apparelPreviews: number;
     stickersGenerated: number;
+  };
+  plan: {
+    id: BillingPlanId;
+    name: string;
+    analyticsAccess: boolean;
+    apparelPreviewLimit: number | null;
+    apparelPreviewLimitExceeded: boolean;
   };
 };
 
@@ -57,43 +75,53 @@ export const meta: MetaFunction = () => ([
 ]);
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+  const { billing, session } = await authenticate.admin(request);
+  const shopDomain = session?.shop ?? null;
 
   const now = new Date();
   const windowStart = startOfDay(addDays(now, -6));
   const windowEnd = addDays(startOfDay(now), 1);
 
   let garmentsConverted = 0;
-  let apparelPreviews = 0;
 
   try {
-    const [convertedCount, widgetEventCount] = await Promise.all([
-      prisma.conversion.count({
-        where: {
-          processed: true,
-          status: "completed",
-          updatedAt: { gte: windowStart, lt: windowEnd },
-        },
-      }),
-      (prisma as any).widgetEvent.count({
-        where: {
-          createdAt: { gte: windowStart, lt: windowEnd },
-          conversion: { processed: true, status: "completed" },
-        },
-      }),
-    ]);
+    const conversionWhere: Record<string, unknown> = {
+      processed: true,
+      status: "completed",
+      updatedAt: { gte: windowStart, lt: windowEnd },
+    };
 
-    garmentsConverted = convertedCount;
-    apparelPreviews = widgetEventCount;
+    if (shopDomain) {
+      conversionWhere["OR"] = [{ shopDomain }, { shopDomain: null }];
+    }
+
+    garmentsConverted = await (prisma as any).conversion.count({
+      where: conversionWhere,
+    });
   } catch (error) {
     console.error("[HOME] Failed to load usage summary", error);
   }
 
+  const planContext = await getPlanForShop({ billing, shopDomain });
+  const apparelUsage = await getApparelPreviewUsage(shopDomain);
+  const apparelLimitExceeded = isApparelPreviewLimitExceeded(
+    planContext.plan,
+    apparelUsage
+  );
+
   return json<LoaderData>({
     usage: {
       garmentsConverted,
-      apparelPreviews,
+      apparelPreviews: apparelUsage.total,
       stickersGenerated: 0,
+    },
+    plan: {
+      id: planContext.planId,
+      name: planContext.plan.name,
+      analyticsAccess: planContext.plan.capabilities.analyticsAccess,
+      apparelPreviewLimit:
+        planContext.plan.capabilities.apparelPreviewLimit ?? null,
+      apparelPreviewLimitExceeded: apparelLimitExceeded,
     },
   });
 };
@@ -117,12 +145,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Index() {
-  const { usage } = useLoaderData<typeof loader>();
+  const { usage, plan } = useLoaderData<typeof loader>();
   const formatMetric = (value: number | null | undefined) =>
     value == null ? "-" : numberFormatter.format(value);
 
   const handleDismiss = () => console.log("Banner dismissed");
   const handleSelectChange = (value: string) => console.log("Select changed to:", value);
+
+  const planBadgeTone =
+    plan.id === "starter" ? "success" : plan.id === "creator" ? "info" : "primary";
 
   return (
     <Page>
@@ -133,9 +164,19 @@ export default function Index() {
             <Text variant="headingXl" as="h1">
              Welcome to Bould | Pioneering the Future of Online Shopping
             </Text>
-            <Badge tone="success">FREE plan</Badge>
+            <Badge tone={planBadgeTone}>{plan.name} plan</Badge>
           </InlineStack>
         </Box>
+
+        {plan.apparelPreviewLimitExceeded && (
+          <Banner tone="critical" title="Upgrade required">
+            <p>
+              You have exceeded the Starter plan&apos;s apparel preview limit. All garments are
+              paused until you upgrade your plan.
+            </p>
+            <Link url="/app/pricing">Choose a plan</Link>
+          </Banner>
+        )}
 
         {/* Section 2 */}
         <Banner onDismiss={handleDismiss}>
@@ -266,7 +307,14 @@ export default function Index() {
               </BlockStack>
               <BlockStack gap="100" inlineAlign="center">
           <Text as="p" tone="subdued">Apparel Previews</Text>
-          <Text variant="headingLg" as="h2">{formatMetric(usage.apparelPreviews)}</Text>
+          <Text variant="headingLg" as="h2">
+            {formatMetric(usage.apparelPreviews)}
+          </Text>
+          {plan.apparelPreviewLimit && (
+            <Text as="p" tone={plan.apparelPreviewLimitExceeded ? "critical" : "subdued"}>
+              {usage.apparelPreviews}/{plan.apparelPreviewLimit} previews used
+            </Text>
+          )}
               </BlockStack>
               <BlockStack gap="100" inlineAlign="center">
           <Text as="p" tone="subdued">Stickers Generated</Text>

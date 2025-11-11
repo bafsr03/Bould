@@ -9,8 +9,6 @@ import {
   Thumbnail,
   Button,
 } from "@shopify/polaris";
-import { Form } from "@remix-run/react";
-
 type ConversionStatus = "pending" | "processing" | "completed" | "failed";
 
 type ShopifyProduct = {
@@ -33,12 +31,20 @@ interface Props {
     trueSize?: string | null;
     unit?: string | null;
     trueWaist?: string | null;
+    deactivated?: boolean;
   }>;
   onSelect?: (product: ShopifyProduct) => void;
   selectedProductId?: string;
+  conversionDisabled?: boolean;
 }
 
-export default function LibraryTable({ products, states, onSelect, selectedProductId }: Props) {
+export default function LibraryTable({
+  products,
+  states,
+  onSelect,
+  selectedProductId,
+  conversionDisabled = false,
+}: Props) {
   const [selectedTab, setSelectedTab] = useState(0);
   const tabs = [
     { id: "all", content: "All" },
@@ -61,10 +67,10 @@ export default function LibraryTable({ products, states, onSelect, selectedProdu
       return tabId === "inactive";
     }
     if (tabId === "active") {
-      return state.processed === true;
+      return state.processed === true && state.deactivated !== true;
     }
     if (tabId === "inactive") {
-      return state.processed !== true;
+      return state.processed !== true || state.deactivated === true;
     }
     return false;
   });
@@ -105,13 +111,18 @@ export default function LibraryTable({ products, states, onSelect, selectedProdu
         {filteredProducts.map((p, rowIndex) => {
           const st = states[p.id] || { status: "pending", processed: false };
           const statusTone =
-            st.status === "completed"
+            st.deactivated
+              ? "critical"
+              : st.status === "completed"
               ? "success"
               : st.status === "processing"
               ? "info"
               : st.status === "failed"
               ? "critical"
               : "attention";
+          const statusLabel = st.deactivated
+            ? "Deactivated"
+            : st.status.charAt(0).toUpperCase() + st.status.slice(1);
 
           return (
             <IndexTable.Row id={p.id} key={p.id} position={rowIndex}>
@@ -129,19 +140,26 @@ export default function LibraryTable({ products, states, onSelect, selectedProdu
               </IndexTable.Cell>
 
               <IndexTable.Cell>
-                <Badge tone={st.processed ? "success" : "attention"}>
-                  {st.processed ? "Yes" : "No"}
+                <Badge tone={st.deactivated ? "critical" : st.processed ? "success" : "attention"}>
+                  {st.deactivated ? "No" : st.processed ? "Yes" : "No"}
                 </Badge>
               </IndexTable.Cell>
 
               <IndexTable.Cell>
                 <Badge tone={statusTone}>
-                  {st.status.charAt(0).toUpperCase() + st.status.slice(1)}
+                  {statusLabel}
                 </Badge>
               </IndexTable.Cell>
 
               <IndexTable.Cell>
-                <Button onClick={() => { onSelect && onSelect(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }} variant="primary">
+                <Button
+                  onClick={() => {
+                    onSelect && onSelect(p);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  variant="primary"
+                  disabled={conversionDisabled || st.deactivated}
+                >
                   Select
                 </Button>
               </IndexTable.Cell>

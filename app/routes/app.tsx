@@ -7,13 +7,18 @@ import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 
 import { authenticate } from "../shopify.server";
 import LoadingPage from "./LoadingPage"; 
+import { getPlanForShop } from "../billing/plan.server";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+  const { billing, session } = await authenticate.admin(request);
+  const planContext = await getPlanForShop({ billing, shopDomain: session?.shop ?? null });
 
-  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+  return {
+    apiKey: process.env.SHOPIFY_API_KEY || "",
+    showAnalytics: planContext.plan.capabilities.analyticsAccess,
+  };
 };
 
 // Helper function to determine loading titles based on the target path
@@ -29,7 +34,7 @@ function getLoadingTitle(pathname: string): string {
 }
 
 export default function App() {
-  const { apiKey } = useLoaderData<typeof loader>();
+  const { apiKey, showAnalytics } = useLoaderData<typeof loader>();
   const navigation = useNavigation();
   const location = useLocation(); 
 
@@ -49,7 +54,7 @@ export default function App() {
         {/*<Link to="/app/blanks">Blanks</Link>
         <Link to="/app/stickers">Stickers</Link>
         <Link to="/app/orders">Orders</Link>*/}
-        <Link to="/app/analytics">Admin & Analytics</Link>
+        {showAnalytics && <Link to="/app/analytics">Admin & Analytics</Link>}
         <Link to="/app/pricing">Pricing</Link>
       </NavMenu>
       {isLoading ? (

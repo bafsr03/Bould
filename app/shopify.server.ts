@@ -2,10 +2,28 @@ import "@shopify/shopify-app-remix/adapters/node";
 import {
   ApiVersion,
   AppDistribution,
+  BillingInterval,
   shopifyApp,
 } from "@shopify/shopify-app-remix/server";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
+import { APP_PLANS } from "./billing/plans";
+
+const billingConfiguration = APP_PLANS.filter((plan) => plan.isPaid).reduce(
+  (accumulator, plan) => {
+    accumulator[plan.billingKey] = {
+      lineItems: [
+        {
+          amount: plan.amount,
+          currencyCode: plan.currencyCode,
+          interval: BillingInterval.Every30Days,
+        },
+      ],
+    };
+    return accumulator;
+  },
+  {} as Record<string, unknown>
+);
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
@@ -16,6 +34,7 @@ const shopify = shopifyApp({
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(prisma),
   distribution: AppDistribution.AppStore,
+  billing: billingConfiguration as any,
   future: {
     unstable_newEmbeddedAuthStrategy: true,
     removeRest: true,

@@ -2,6 +2,11 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { unauthenticated } from "../shopify.server";
 import prisma from "../db.server";
+import { getPlanForShop } from "../billing/plan.server";
+import {
+  getApparelPreviewUsage,
+  isApparelPreviewLimitExceeded,
+} from "../billing/usage.server";
 
 function logRequest(method: string, path: string, status: number, duration: number, details?: any) {
   const timestamp = new Date().toISOString();
@@ -42,6 +47,8 @@ async function recordWidgetEvent(data: {
   }
 }
 
+const UPGRADE_WIDGET_MESSAGE = "Upgrade to continue using Bould.";
+
 // Handles Shopify App Proxy requests hitting /app/proxy/bould on our app
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const startTime = Date.now();
@@ -60,6 +67,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const url = new URL(request.url);
     const intent = url.searchParams.get("intent");
     const productId = url.searchParams.get("product_id");
+    const shopDomain = url.searchParams.get("shop") || undefined;
 
     if (intent === "status") {
       if (!productId) {
@@ -83,11 +91,49 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         conversionStatus = "database_error";
       }
 
+      let planPayload: {
+        id: string | null;
+        name: string | null;
+        blocked: boolean;
+        message: string | null;
+        apparelPreviewLimit: number | null;
+      } | null = null;
+
+      try {
+        const planContext = await getPlanForShop({ shopDomain });
+        const apparelLimit = planContext.plan.capabilities.apparelPreviewLimit ?? null;
+        let planBlocked = false;
+        let planMessage: string | null = null;
+
+        if (shopDomain && apparelLimit != null) {
+          try {
+            const apparelUsage = await getApparelPreviewUsage(shopDomain);
+            planBlocked = isApparelPreviewLimitExceeded(planContext.plan, apparelUsage);
+            if (planBlocked) {
+              planMessage = UPGRADE_WIDGET_MESSAGE;
+            }
+          } catch (usageError) {
+            logError(usageError, "widget proxy status usage", { requestId, shopDomain });
+          }
+        }
+
+        planPayload = {
+          id: planContext.planId,
+          name: planContext.plan.name,
+          blocked: planBlocked,
+          message: planMessage,
+          apparelPreviewLimit: apparelLimit,
+        };
+      } catch (planError) {
+        logError(planError, "widget proxy status plan", { requestId, shopDomain });
+      }
+
       const payload = {
         ok: true,
         productId,
         isProcessed: isGarmentProcessed,
         conversionStatus,
+        plan: planPayload,
         debug: { requestId },
       };
 
@@ -196,6 +242,39 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (!productId) {
       logRequest("POST", "/app/proxy/bould", 400, Date.now() - startTime, { requestId, error: "Missing product ID" });
       return json({ error: "Product ID is required", debug: { requestId } }, { status: 400 });
+    }
+
+    if (shopDomain) {
+      try {
+        const planContext = await getPlanForShop({ shopDomain });
+        const apparelLimit = planContext.plan.capabilities.apparelPreviewLimit ?? null;
+        if (apparelLimit != null) {
+          const apparelUsage = await getApparelPreviewUsage(shopDomain);
+          const planBlocked = isApparelPreviewLimitExceeded(planContext.plan, apparelUsage);
+          if (planBlocked) {
+            const message = UPGRADE_WIDGET_MESSAGE;
+            return json(
+              {
+                error: message,
+                debug: {
+                  requestId,
+                  shopDomain,
+                  planId: planContext.planId,
+                  apparelPreviewLimit: apparelLimit,
+                  apparelPreviewsUsed: apparelUsage.total,
+                  correlationId: clientCorrelationId,
+                },
+              },
+              {
+                status: 409,
+                headers: { "X-Correlation-ID": clientCorrelationId || requestId },
+              }
+            );
+          }
+        }
+      } catch (planError) {
+        logError(planError, "widget proxy plan enforcement", { requestId, shopDomain });
+      }
     }
 
     let isGarmentProcessed = false;

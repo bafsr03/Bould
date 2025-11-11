@@ -14,11 +14,12 @@ import {
 import { TitleBar } from "@shopify/app-bridge-react";
 import { CalendarIcon } from "@shopify/polaris-icons";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { json } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFetcher, useLoaderData } from "@remix-run/react";
 import prisma from "../db.server";
 import { authenticate } from "../shopify.server";
+import { getPlanForShop } from "../billing/plan.server";
 
 type MetricsWindow = {
   label: string;
@@ -202,7 +203,25 @@ async function generateInsights(input: InsightsInput): Promise<string> {
 }
 
 async function buildAnalyticsData(request: Request): Promise<AnalyticsData> {
-  await authenticate.admin(request);
+  const { billing, session } = await authenticate.admin(request);
+  const shopDomain = session?.shop ?? null;
+  const planContext = await getPlanForShop({ billing, shopDomain });
+
+  if (!planContext.plan.capabilities.analyticsAccess) {
+    throw redirect("/app/pricing?status=analytics-upgrade");
+  }
+
+  const conversionScope = shopDomain
+    ? {
+        OR: [{ shopDomain }, { shopDomain: null }],
+      }
+    : {};
+
+  const widgetScope = shopDomain
+    ? {
+        OR: [{ shopDomain }, { shopDomain: null }],
+      }
+    : {};
 
   const now = new Date();
   const window: MetricsWindow = {
@@ -226,6 +245,7 @@ async function buildAnalyticsData(request: Request): Promise<AnalyticsData> {
   ] = await Promise.all([
     prisma.conversion.count({
       where: {
+        ...conversionScope,
         updatedAt: { gte: window.start, lt: window.end },
         processed: true,
         status: "completed",
@@ -233,14 +253,22 @@ async function buildAnalyticsData(request: Request): Promise<AnalyticsData> {
     }),
     prisma.conversion.count({
       where: {
+        ...conversionScope,
         updatedAt: { gte: prevWindow.start, lt: prevWindow.end },
         processed: true,
         status: "completed",
       },
     }),
-    prisma.conversion.count({ where: { processed: true, status: "completed" } }),
+    prisma.conversion.count({
+      where: {
+        ...conversionScope,
+        processed: true,
+        status: "completed",
+      },
+    }),
     (prisma as any).widgetEvent.findMany({
       where: {
+        ...widgetScope,
         createdAt: { gte: window.start, lt: window.end },
         conversion: { processed: true, status: "completed" },
       },
@@ -248,6 +276,7 @@ async function buildAnalyticsData(request: Request): Promise<AnalyticsData> {
     }),
     (prisma as any).widgetEvent.findMany({
       where: {
+        ...widgetScope,
         createdAt: { gte: prevWindow.start, lt: prevWindow.end },
         conversion: { processed: true, status: "completed" },
       },
@@ -255,6 +284,7 @@ async function buildAnalyticsData(request: Request): Promise<AnalyticsData> {
     }),
     prisma.conversion.findMany({
       where: {
+        ...conversionScope,
         processed: true,
         status: "completed",
         updatedAt: { gte: window.start, lt: window.end },
