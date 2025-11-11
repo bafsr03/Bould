@@ -108,10 +108,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const intent = url.searchParams.get('intent');
     const productId = url.searchParams.get('product_id');
     const shopDomain = url.searchParams.get('shop') || undefined;
+    const designMode = url.searchParams.get('design_mode') === '1';
 
     // Preflight status check for storefront widget
     if (intent === 'status') {
-      if (!productId) {
+      if (!productId && !designMode) {
         logRequest('GET', '/apps/bould-widget', 400, Date.now() - startTime, { requestId, error: 'Missing product ID (status preflight)' });
         return json({ error: 'Product ID is required', debug: { requestId } }, { status: 400, headers: { 'X-Correlation-ID': request.headers.get('X-Correlation-ID') || requestId } });
       }
@@ -122,15 +123,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
       let isGarmentProcessed = false;
       let conversionStatus: string = 'not_found';
-      try {
-        const conversion = await (prisma as any).conversion.findFirst({ where: { shopifyProductId: productId } });
-        if (conversion) {
-          conversionStatus = conversion.status;
-          isGarmentProcessed = conversion.processed === true && conversion.status === 'completed';
+      if (productId) {
+        try {
+          const conversion = await (prisma as any).conversion.findFirst({ where: { shopifyProductId: productId } });
+          if (conversion) {
+            conversionStatus = conversion.status;
+            isGarmentProcessed = conversion.processed === true && conversion.status === 'completed';
+          }
+        } catch (dbError: any) {
+          logError(dbError, 'widget loader status db', { requestId, productId });
+          conversionStatus = 'database_error';
         }
-      } catch (dbError: any) {
-        logError(dbError, 'widget loader status db', { requestId, productId });
-        conversionStatus = 'database_error';
+      } else {
+        conversionStatus = 'design_mode';
       }
 
       const planContext = await getPlanForShop({ shopDomain });
@@ -152,7 +157,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
       const payload = {
         ok: true,
-        productId,
+        productId: productId ?? null,
         isProcessed: isGarmentProcessed,
         conversionStatus,
         plan: {
@@ -165,7 +170,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         debug: { requestId }
       };
 
-      logRequest('GET', '/apps/bould-widget', 200, Date.now() - startTime, { requestId, productId, conversionStatus, isGarmentProcessed });
+      logRequest('GET', '/apps/bould-widget', 200, Date.now() - startTime, { requestId, productId: productId ?? null, conversionStatus, isGarmentProcessed, designMode });
       return json(payload, { headers: { 'X-Correlation-ID': request.headers.get('X-Correlation-ID') || requestId } });
     }
 

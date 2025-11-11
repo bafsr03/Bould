@@ -25,25 +25,36 @@
       return notice;
     }
 
+    const UPGRADE_MESSAGE = "Upgrade to continue using Bould.";
+
     function applyPlanState(payload){
       lastStatusPayload = payload || null;
       const plan = payload && payload.plan ? payload.plan : null;
       const blocked = !!(plan && plan.blocked);
       const existingNotice = container.querySelector('.bould-widget__upgrade');
+      const designMode = !!(window.Shopify && window.Shopify.designMode);
 
       if (blocked) {
         const message =
-          plan.message ||
-          'Upgrade your Bould plan to continue offering size recommendations.';
-        const notice = existingNotice || ensureUpgradeNotice();
-        notice.textContent = message;
-        notice.hidden = false;
+          plan && plan.message
+            ? plan.message
+            : UPGRADE_MESSAGE;
+
+        if (designMode) {
+          const notice = existingNotice || ensureUpgradeNotice();
+          notice.textContent = message;
+          notice.hidden = false;
+        } else if (existingNotice) {
+          existingNotice.textContent = '';
+          existingNotice.hidden = true;
+        }
+
         container.setAttribute('data-plan-blocked', 'true');
 
         if (openBtn) {
           openBtn.disabled = true;
           openBtn.classList.add('bould-widget__open--disabled');
-          openBtn.style.display = 'none';
+          openBtn.style.display = designMode ? '' : 'none';
           openBtn.setAttribute('data-disabled-reason', 'plan-blocked');
           openBtn.setAttribute('title', message);
           openBtn.setAttribute('aria-disabled', 'true');
@@ -67,11 +78,20 @@
 
     async function fetchStatusPayload(){
       const productId = getProductId();
-      if (!productId) {
+      const designMode = !!(window.Shopify && window.Shopify.designMode);
+      if (!productId && !designMode) {
         return null;
       }
       const correlationId = Math.random().toString(36).slice(2, 10);
-      const statusUrl = `${getEndpointBase()}?intent=status&product_id=${encodeURIComponent(productId)}`;
+      const statusParams = new URLSearchParams();
+      statusParams.set('intent', 'status');
+      if (productId) {
+        statusParams.set('product_id', productId);
+      }
+      if (designMode) {
+        statusParams.set('design_mode', '1');
+      }
+      const statusUrl = `${getEndpointBase()}?${statusParams.toString()}`;
       const res = await fetch(statusUrl, {
         headers: {
           'Accept': 'application/json',
