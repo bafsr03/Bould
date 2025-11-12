@@ -28,11 +28,14 @@ import {
   isApparelPreviewLimitExceeded,
 } from "../billing/usage.server";
 
+const numberFormatter = new Intl.NumberFormat("en-US");
+
 type LoaderData = {
   activePlanId: BillingPlanId;
   planName: string;
   apparelPreviewLimit: number | null;
   apparelPreviewLimitExceeded: boolean;
+  apparelPreviewsUsed: number;
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -53,14 +56,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     planName: planContext.plan.name,
     apparelPreviewLimit: planContext.plan.capabilities.apparelPreviewLimit ?? null,
     apparelPreviewLimitExceeded: apparelLimitExceeded,
+    apparelPreviewsUsed: usage.total,
   });
 };
 
 export default function PricingPage() {
-  const { activePlanId, apparelPreviewLimit, apparelPreviewLimitExceeded } =
-    useLoaderData<typeof loader>();
+  const {
+    activePlanId,
+    apparelPreviewLimit,
+    apparelPreviewLimitExceeded,
+    apparelPreviewsUsed,
+  } = useLoaderData<typeof loader>();
   const [searchParams] = useSearchParams();
   const status = searchParams.get("status");
+  const formattedApparelPreviews = numberFormatter.format(apparelPreviewsUsed);
 
   const statusBanner =
     status === "upgraded" ? (
@@ -109,13 +118,13 @@ export default function PricingPage() {
                   Number of monthly visitors
                 </Text>
                 <Text variant="bodyLg" as="p" fontWeight="medium">
-                  10,000{" "}
+                  {formattedApparelPreviews}{" "}
                   <Text as="span" tone="subdued">
-                    unique visitors per month
+                    shoppers have used your widget so far
                   </Text>
                 </Text>
                 <Text as="p" tone="subdued">
-                  If you exceed your limit, Bould will pause your free plan
+                  Stay within your plan limit to keep the widget active for shoppers.
                 </Text>
                 {overageBanner}
                 {statusBanner}
