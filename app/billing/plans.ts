@@ -3,6 +3,7 @@ export type BillingPlanId = "starter" | "creator" | "pro";
 export interface PlanCapabilities {
   analyticsAccess: boolean;
   apparelPreviewLimit?: number;
+  apparelPreviewResetMinutes?: number | null;
   maxStoreInstalls?: number | null;
 }
 
@@ -39,7 +40,7 @@ export const APP_PLANS: AppPlanDefinition[] = [
     isPaid: false,
     capabilities: {
       analyticsAccess: false,
-      apparelPreviewLimit: 2,
+      apparelPreviewLimit: 50,
       maxStoreInstalls: 1,
     },
   },
@@ -55,12 +56,13 @@ export const APP_PLANS: AppPlanDefinition[] = [
       "500 images generations/month (across all shoppers)",
       "Up to 3 store installs",
       "Advanced analytics (conversion rates, widget usage, tailor feedback)",
-      "Tailor tone for recommendation feedback",
     ],
     cta: "Choose Creator",
     isPaid: true,
     capabilities: {
       analyticsAccess: true,
+      apparelPreviewLimit: 500,
+      apparelPreviewResetMinutes: 30 * 24 * 60,
       maxStoreInstalls: 3,
     },
   },
@@ -77,6 +79,7 @@ export const APP_PLANS: AppPlanDefinition[] = [
       "Custom rate limits + white-label widget",
       "API access for internal tools",
       "Priority support",
+      "Tailor tone for recommendation feedback",
     ],
     cta: "Choose Pro",
     recommended: true,

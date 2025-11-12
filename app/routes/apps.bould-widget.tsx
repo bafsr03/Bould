@@ -142,10 +142,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       let planBlocked = false;
       let planMessage: string | null = null;
       let apparelLimit = planContext.plan.capabilities.apparelPreviewLimit ?? null;
+      const apparelWindowMinutes =
+        planContext.plan.capabilities.apparelPreviewResetMinutes ?? undefined;
 
       if (shopDomain && apparelLimit != null) {
         try {
-          const apparelUsage = await getApparelPreviewUsage(shopDomain);
+          const apparelUsage = await getApparelPreviewUsage(shopDomain, {
+            windowMinutes: apparelWindowMinutes,
+          });
           planBlocked = isApparelPreviewLimitExceeded(planContext.plan, apparelUsage);
           if (planBlocked) {
             planMessage = UPGRADE_WIDGET_MESSAGE;
@@ -284,7 +288,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const apparelLimit = planContext.plan.capabilities.apparelPreviewLimit ?? null;
     if (shopDomain && apparelLimit != null) {
       try {
-        const apparelUsage = await getApparelPreviewUsage(shopDomain);
+        const apparelUsage = await getApparelPreviewUsage(shopDomain, {
+          windowMinutes: planContext.plan.capabilities.apparelPreviewResetMinutes ?? undefined,
+        });
         const planBlocked = isApparelPreviewLimitExceeded(planContext.plan, apparelUsage);
         if (planBlocked) {
           const message = UPGRADE_WIDGET_MESSAGE;

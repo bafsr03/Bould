@@ -40,7 +40,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shopDomain = session?.shop ?? null;
 
   const planContext = await getPlanForShop({ billing, shopDomain });
-  const usage = await getApparelPreviewUsage(shopDomain);
+  const usage = await getApparelPreviewUsage(shopDomain, {
+    windowMinutes: planContext.plan.capabilities.apparelPreviewResetMinutes ?? undefined,
+  });
   const apparelLimitExceeded = isApparelPreviewLimitExceeded(
     planContext.plan,
     usage

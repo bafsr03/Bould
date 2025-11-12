@@ -6,11 +6,19 @@ export interface ApparelPreviewUsage {
 }
 
 export async function getApparelPreviewUsage(
-  shopDomain: string | null | undefined
+  shopDomain: string | null | undefined,
+  options?: { windowMinutes?: number | null }
 ): Promise<ApparelPreviewUsage> {
   const baseFilter: Record<string, unknown> = {
     conversion: { processed: true, status: "completed" },
   };
+
+  const windowMinutes = options?.windowMinutes ?? null;
+  if (windowMinutes && windowMinutes > 0) {
+    baseFilter["createdAt"] = {
+      gte: new Date(Date.now() - windowMinutes * 60 * 1000),
+    };
+  }
 
   if (shopDomain) {
     baseFilter["OR"] = [{ shopDomain }, { shopDomain: null }];
