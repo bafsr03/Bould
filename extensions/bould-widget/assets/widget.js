@@ -6,6 +6,238 @@
     const closeBtn = container.querySelector('.bould-widget__close');
     let statusPromise = null;
     let lastStatusPayload = null;
+    const errorActionButton = modal ? modal.querySelector('.bould-widget__screen--error [data-action]') : null;
+    const errorActionDefaults = errorActionButton
+      ? {
+          label: errorActionButton.textContent || 'Try again',
+          action: errorActionButton.getAttribute('data-action') || 'back-to-form',
+        }
+      : { label: 'Try again', action: 'back-to-form' };
+    const DEFAULT_ERROR_HEADING = 'Something went wrong';
+
+    function escapeHtml(value){
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function formatMessage(value){
+      return escapeHtml(value).replace(/\r?\n/g, '<br />');
+    }
+
+    function isDesignMode(){
+      try{
+        return !!(window.Shopify && window.Shopify.designMode);
+      }catch(e){
+        return false;
+      }
+    }
+
+    function isPhoneDevice(){
+      try{
+        if (navigator?.userAgentData && typeof navigator.userAgentData.mobile === 'boolean'){
+          return navigator.userAgentData.mobile;
+        }
+      }catch(e){}
+      const ua = (navigator.userAgent || navigator.vendor || (window.opera && window.opera.toString && window.opera.toString()) || '').toLowerCase();
+      const matchesUa = /(android|iphone|ipad|ipod|windows phone|blackberry|bb10|mobile)/i.test(ua);
+      const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+      const narrow = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 820px)').matches;
+      return matchesUa || (coarse && narrow);
+    }
+
+    function ensureStateNotice(){
+      let notice = container.querySelector('.bould-widget__state');
+      if (!notice) {
+        notice = document.createElement('div');
+        notice.className = 'bould-widget__state';
+        if (openBtn && typeof openBtn.insertAdjacentElement === 'function') {
+          openBtn.insertAdjacentElement('afterend', notice);
+        } else {
+          container.appendChild(notice);
+        }
+      }
+      return notice;
+    }
+
+    function renderDebugInfo(debugInfo){
+      if (!debugInfo) return '';
+      const lines = [];
+      if (debugInfo.requestId) lines.push(`Request ID: ${escapeHtml(debugInfo.requestId)}`);
+      if (debugInfo.productId) lines.push(`Product ID: ${escapeHtml(debugInfo.productId)}`);
+      if (debugInfo.conversionStatus) lines.push(`Conversion Status: ${escapeHtml(debugInfo.conversionStatus)}`);
+      if (debugInfo.statusCode) lines.push(`Status Code: ${escapeHtml(debugInfo.statusCode)}`);
+      if (debugInfo.timestamp) lines.push(`Timestamp: ${escapeHtml(debugInfo.timestamp)}`);
+      if (debugInfo.suggestion) lines.push(`Suggestion: ${escapeHtml(debugInfo.suggestion)}`);
+      if (debugInfo.reason) lines.push(`Reason: ${escapeHtml(debugInfo.reason)}`);
+      if (debugInfo.correlationId) lines.push(`Correlation ID: ${escapeHtml(debugInfo.correlationId)}`);
+      if (debugInfo.responseCorrelationId) lines.push(`Response ID: ${escapeHtml(debugInfo.responseCorrelationId)}`);
+      if (!lines.length) return '';
+      return `<div class="bould-widget__debug-info"><strong>Debug Information:</strong><br>${lines.join('<br>')}</div>`;
+    }
+
+    function updateAvailabilityState(payload){
+      if (!openBtn) return;
+      const notice = ensureStateNotice();
+      const designMode = isDesignMode();
+      const issues = [];
+
+      if (!designMode && !isCustomerLoggedIn()){
+        issues.push({
+          code: 'login-required',
+          message: 'Please log in to use the Bould size finder.',
+          level: 'info',
+          blockButton: true
+        });
+      }
+
+      if (!designMode && isPhoneDevice()){
+        issues.push({
+          code: 'mobile-unsupported',
+          message: 'The Bould try-on preview currently works on desktop browsers. Please open this page on a desktop to continue.',
+          level: 'warning',
+          blockButton: true
+        });
+      }
+
+      if (!designMode && payload && payload.isProcessed === false){
+        const status = payload.conversionStatus || 'not_ready';
+        let message = 'Convert this garment in the Bould app to unlock the fit preview.';
+        let level = 'warning';
+        if (status === 'processing') {
+          message = 'We are still preparing this garment. Please try again in a few minutes.';
+        } else if (status === 'failed') {
+          message = 'Garment conversion failed. Convert this item again in the Bould app before shoppers can use the widget.';
+          level = 'error';
+        }
+        issues.push({
+          code: 'garment-unprocessed',
+          message,
+          level,
+          blockButton: false
+        });
+      }
+
+      if (issues.length) {
+        const highestLevel = issues.reduce((acc, issue) => {
+          const weight = issue.level === 'error' ? 3 : issue.level === 'warning' ? 2 : 1;
+          return weight > acc ? weight : acc;
+        }, 0);
+        notice.className = 'bould-widget__state';
+        if (highestLevel === 2) {
+          notice.classList.add('bould-widget__state--warning');
+        } else if (highestLevel === 3) {
+          notice.classList.add('bould-widget__state--error');
+        }
+        if (issues.length > 1) {
+          notice.innerHTML = `<ul>${issues.map((issue) => `<li>${escapeHtml(issue.message)}</li>`).join('')}</ul>`;
+        } else {
+          notice.innerHTML = `<p>${escapeHtml(issues[0].message)}</p>`;
+        }
+        notice.hidden = false;
+      } else {
+        notice.className = 'bould-widget__state';
+        notice.innerHTML = '';
+        notice.hidden = true;
+      }
+
+      const planBlocked = container.getAttribute('data-plan-blocked') === 'true';
+      const requiresDisable = planBlocked || issues.some((issue) => issue.blockButton);
+      if (requiresDisable) {
+        openBtn.disabled = true;
+        openBtn.classList.add('bould-widget__open--disabled');
+        openBtn.setAttribute('aria-disabled', 'true');
+        const blockingIssue = planBlocked ? null : issues.find((issue) => issue.blockButton);
+        if (blockingIssue) {
+          openBtn.setAttribute('data-disabled-reason', blockingIssue.code);
+          openBtn.setAttribute('title', blockingIssue.message);
+        } else if (!planBlocked) {
+          openBtn.removeAttribute('data-disabled-reason');
+          openBtn.removeAttribute('title');
+        }
+      } else if (!planBlocked) {
+        openBtn.disabled = false;
+        openBtn.classList.remove('bould-widget__open--disabled');
+        openBtn.removeAttribute('aria-disabled');
+        openBtn.removeAttribute('data-disabled-reason');
+        openBtn.removeAttribute('title');
+      }
+    }
+
+    function getImmediateGate(designMode){
+      if (designMode) {
+        return null;
+      }
+      if (!isCustomerLoggedIn()){
+        return {
+          heading: 'Sign in required',
+          message: 'Please log in to your store account to use this feature.',
+          tone: 'info',
+          action: 'close',
+          debug: { reason: 'not_logged_in' }
+        };
+      }
+      if (isPhoneDevice()){
+        return {
+          heading: 'Desktop device required',
+          message: 'The Bould try-on preview currently works on desktop browsers. Please open this page on a desktop to continue.',
+          tone: 'warning',
+          action: 'close',
+          debug: { reason: 'phone_device' }
+        };
+      }
+      return null;
+    }
+
+    function getPreflightGate(payload, designMode){
+      if (!payload) {
+        return null;
+      }
+      if (payload.plan && payload.plan.blocked){
+        return {
+          heading: 'Upgrade required',
+          message: payload.plan.message || UPGRADE_MESSAGE,
+          tone: 'warning',
+          action: 'close',
+          debug: {
+            requestId: payload?.debug?.requestId,
+            planId: payload.plan.id,
+            productId: payload.productId || getProductId(),
+            reason: 'plan_blocked'
+          }
+        };
+      }
+      if (!designMode && payload.isProcessed === false){
+        const conversionStatus = payload.conversionStatus || 'not_ready';
+        let heading = "Garment isn't ready yet";
+        let message = 'Convert this garment in the Bould app to unlock the try-on preview for shoppers.';
+        let tone = 'warning';
+        if (conversionStatus === 'processing'){
+          heading = 'Garment still processing';
+          message = 'We are still processing this garment. Please wait a few minutes and try again.';
+        } else if (conversionStatus === 'failed'){
+          heading = 'Garment conversion failed';
+          message = 'Convert this garment again in the Bould app before shoppers can use the try-on feature.';
+          tone = 'error';
+        }
+        return {
+          heading,
+          message,
+          tone,
+          action: 'close',
+          debug: {
+            requestId: payload?.debug?.requestId,
+            productId: payload.productId || getProductId(),
+            conversionStatus,
+            reason: 'garment_unprocessed'
+          }
+        };
+      }
+      return null;
+    }
 
     function getEndpointBase(){
       const base = container.getAttribute('data-api-base');
@@ -74,6 +306,7 @@
           openBtn.removeAttribute('aria-disabled');
         }
       }
+      updateAvailabilityState(payload);
     }
 
     async function fetchStatusPayload(){
@@ -198,15 +431,15 @@
     }
 
     async function open(){
-      if(!isCustomerLoggedIn()){
-        alert('Please log in to test this feature.');
-        return;
+      const designMode = isDesignMode();
+      const immediateGate = getImmediateGate(designMode);
+      let preflight = null;
+      try{
+        preflight = await ensurePlanStatus();
+      }catch(e){
+        preflight = null;
       }
-
-      const preflight = await ensurePlanStatus();
-      if (preflight && preflight.plan && preflight.plan.blocked) {
-        return;
-      }
+      const gate = immediateGate || getPreflightGate(preflight, designMode);
 
       // Move modal to document.body to ensure full-viewport overlay
       if(!modal.parentElement || modal.parentElement !== document.body){
@@ -215,14 +448,14 @@
       modal.hidden = false;
       modal.setAttribute('data-state','opening');
 
-      if(preflight){
-        const productId = getProductId();
-        if(!preflight.isProcessed){
-          const msg = preflight.conversionStatus === 'processing'
-            ? 'This garment is currently being processed. Please wait a few minutes and try again.'
-            : "This garment hasn't been edited.";
-          return showError(msg, { requestId: preflight?.debug?.requestId, productId, conversionStatus: preflight.conversionStatus });
-        }
+      if (gate){
+        showError(gate.message, gate.debug || null, {
+          heading: gate.heading,
+          tone: gate.tone || 'warning',
+          action: gate.action || 'close'
+        });
+        setTimeout(function(){ modal.removeAttribute('data-state'); }, 250);
+        return;
       }
 
       showScreen('intro');
@@ -442,29 +675,33 @@
           showScreen('result');
         }catch(err){
           console.error('[Bould Widget] Error occurred:', err);
-          
+
           let message = (err && err.message ? err.message : 'Unknown error occurred. Please try again.');
           if (err && err.name === 'AbortError') {
             message = 'The request timed out before completing. Please try again in a moment.';
           }
-          
-          // Add debug information if available
-          if (err.debugInfo) {
-            console.log('[Bould Widget] Debug information:', err.debugInfo);
-            if (err.debugInfo.requestId) {
-              message += `\n\nDebug ID: ${err.debugInfo.requestId}`;
+
+          let debugInfo = err && err.debugInfo ? { ...err.debugInfo } : null;
+          if (err && err.statusCode) {
+            if (!debugInfo) {
+              debugInfo = {};
             }
-            if (err.debugInfo.suggestion) {
-              message += `\n\nSuggestion: ${err.debugInfo.suggestion}`;
-            }
+            debugInfo.statusCode = err.statusCode;
           }
-          
-          // Add status code information
-          if (err.statusCode) {
-            message += `\n\nStatus Code: ${err.statusCode}`;
+          if (debugInfo) {
+            console.log('[Bould Widget] Debug information:', debugInfo);
           }
-          
-          showError(message, err.debugInfo);
+
+          const errorOptions = {};
+          if (err && err.statusCode === 409) {
+            errorOptions.tone = 'warning';
+            errorOptions.heading = 'Action needed';
+            errorOptions.action = 'close';
+          } else if (err && err.statusCode && err.statusCode >= 500) {
+            errorOptions.tone = 'error';
+          }
+
+          showError(message, debugInfo, errorOptions);
           if (err && err.statusCode === 409) {
             ensurePlanStatus();
           }
@@ -472,35 +709,52 @@
       });
     }
 
-    function showError(message, debugInfo = null){
-      const pre = modal.querySelector('.bould-widget__error');
-      
-      // Create enhanced error display
-      let errorHTML = `<div class="bould-widget__error-content">${message}</div>`;
-      
-      if (debugInfo) {
-        errorHTML += `<div class="bould-widget__debug-info" style="margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 4px; font-size: 12px; color: #666;">`;
-        errorHTML += `<strong>Debug Information:</strong><br>`;
-        
-        if (debugInfo.requestId) {
-          errorHTML += `Request ID: ${debugInfo.requestId}<br>`;
-        }
-        if (debugInfo.productId) {
-          errorHTML += `Product ID: ${debugInfo.productId}<br>`;
-        }
-        if (debugInfo.conversionStatus) {
-          errorHTML += `Conversion Status: ${debugInfo.conversionStatus}<br>`;
-        }
-        if (debugInfo.timestamp) {
-          errorHTML += `Timestamp: ${debugInfo.timestamp}<br>`;
-        }
-        
-        errorHTML += `</div>`;
+    function showError(message, debugInfo = null, options = {}){
+      const errorScreen = modal.querySelector('.bould-widget__screen--error');
+      if (!errorScreen) {
+        return;
       }
-      
-      pre.innerHTML = errorHTML;
+
+      const titleEl = errorScreen.querySelector('h3');
+      if (titleEl) {
+        titleEl.textContent = options.heading || DEFAULT_ERROR_HEADING;
+      }
+
+      if (errorActionButton) {
+        if (options.action === 'close') {
+          errorActionButton.textContent = options.actionLabel || 'Close';
+          errorActionButton.setAttribute('data-action', 'close');
+        } else {
+          errorActionButton.textContent = errorActionDefaults.label;
+          errorActionButton.setAttribute('data-action', errorActionDefaults.action);
+        }
+      }
+
+      const pre = errorScreen.querySelector('.bould-widget__error');
+      if (pre) {
+        pre.className = 'bould-widget__error';
+        pre.classList.add('bould-widget__error--danger');
+        if (options.tone === 'info') {
+          pre.classList.remove('bould-widget__error--danger');
+          pre.classList.add('bould-widget__error--info');
+        } else if (options.tone === 'warning') {
+          pre.classList.remove('bould-widget__error--danger');
+          pre.classList.add('bould-widget__error--warn');
+        } else if (options.tone === 'error') {
+          pre.classList.add('bould-widget__error--danger');
+        }
+
+        const parts = [`<div class="bould-widget__error-content">${formatMessage(message)}</div>`];
+        const debugHtml = renderDebugInfo(debugInfo);
+        if (debugHtml) {
+          parts.push(debugHtml);
+        }
+        pre.innerHTML = parts.join('');
+      }
+
       showScreen('error');
     }
+    updateAvailabilityState(lastStatusPayload);
     ensurePlanStatus();
   });
 })();
