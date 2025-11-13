@@ -5,7 +5,6 @@
     const modal = container.querySelector('.bould-widget');
     const closeBtn = container.querySelector('.bould-widget__close');
     let statusPromise = null;
-    let lastStatusPayload = null;
     const errorActionButton = modal ? modal.querySelector('.bould-widget__screen--error [data-action]') : null;
     const errorActionDefaults = errorActionButton
       ? {
@@ -54,6 +53,7 @@
       if (!notice) {
         notice = document.createElement('div');
         notice.className = 'bould-widget__state';
+        notice.hidden = true;
         if (openBtn && typeof openBtn.insertAdjacentElement === 'function') {
           openBtn.insertAdjacentElement('afterend', notice);
         } else {
@@ -61,6 +61,55 @@
         }
       }
       return notice;
+    }
+
+    function showInlineNotice(message, tone){
+      const notice = ensureStateNotice();
+      notice.className = 'bould-widget__state';
+      if (tone === 'warning') {
+        notice.classList.add('bould-widget__state--warning');
+      } else if (tone === 'error') {
+        notice.classList.add('bould-widget__state--error');
+      }
+      notice.innerHTML = `<p>${escapeHtml(message)}</p>`;
+      notice.hidden = false;
+    }
+
+    function clearInlineNotice(){
+      const notice = container.querySelector('.bould-widget__state');
+      if (notice) {
+        notice.className = 'bould-widget__state';
+        notice.innerHTML = '';
+        notice.hidden = true;
+      }
+    }
+
+    function setOpenButtonDisabled(disabled, reason, title){
+      if (!openBtn) return;
+      if (!disabled && container.getAttribute('data-plan-blocked') === 'true') {
+        return;
+      }
+      if (disabled) {
+        openBtn.disabled = true;
+        openBtn.classList.add('bould-widget__open--disabled');
+        openBtn.setAttribute('aria-disabled', 'true');
+        if (reason) {
+          openBtn.setAttribute('data-disabled-reason', reason);
+        }
+        if (title) {
+          openBtn.setAttribute('title', title);
+        }
+      } else {
+        openBtn.disabled = false;
+        openBtn.classList.remove('bould-widget__open--disabled');
+        openBtn.removeAttribute('aria-disabled');
+        if (!reason || openBtn.getAttribute('data-disabled-reason') === reason) {
+          openBtn.removeAttribute('data-disabled-reason');
+        }
+        if (!title || openBtn.getAttribute('title') === title) {
+          openBtn.removeAttribute('title');
+        }
+      }
     }
 
     function renderDebugInfo(debugInfo){
@@ -79,94 +128,6 @@
       return `<div class="bould-widget__debug-info"><strong>Debug Information:</strong><br>${lines.join('<br>')}</div>`;
     }
 
-    function updateAvailabilityState(payload){
-      if (!openBtn) return;
-      const notice = ensureStateNotice();
-      const designMode = isDesignMode();
-      const issues = [];
-
-      if (!designMode && !isCustomerLoggedIn()){
-        issues.push({
-          code: 'login-required',
-          message: 'Please log in to use the Bould size finder.',
-          level: 'info',
-          blockButton: true
-        });
-      }
-
-      if (!designMode && isPhoneDevice()){
-        issues.push({
-          code: 'mobile-unsupported',
-          message: 'The Bould try-on preview currently works on desktop browsers. Please open this page on a desktop to continue.',
-          level: 'warning',
-          blockButton: true
-        });
-      }
-
-      if (!designMode && payload && payload.isProcessed === false){
-        const status = payload.conversionStatus || 'not_ready';
-        let message = 'Convert this garment in the Bould app to unlock the fit preview.';
-        let level = 'warning';
-        if (status === 'processing') {
-          message = 'We are still preparing this garment. Please try again in a few minutes.';
-        } else if (status === 'failed') {
-          message = 'Garment conversion failed. Convert this item again in the Bould app before shoppers can use the widget.';
-          level = 'error';
-        }
-        issues.push({
-          code: 'garment-unprocessed',
-          message,
-          level,
-          blockButton: false
-        });
-      }
-
-      if (issues.length) {
-        const highestLevel = issues.reduce((acc, issue) => {
-          const weight = issue.level === 'error' ? 3 : issue.level === 'warning' ? 2 : 1;
-          return weight > acc ? weight : acc;
-        }, 0);
-        notice.className = 'bould-widget__state';
-        if (highestLevel === 2) {
-          notice.classList.add('bould-widget__state--warning');
-        } else if (highestLevel === 3) {
-          notice.classList.add('bould-widget__state--error');
-        }
-        if (issues.length > 1) {
-          notice.innerHTML = `<ul>${issues.map((issue) => `<li>${escapeHtml(issue.message)}</li>`).join('')}</ul>`;
-        } else {
-          notice.innerHTML = `<p>${escapeHtml(issues[0].message)}</p>`;
-        }
-        notice.hidden = false;
-      } else {
-        notice.className = 'bould-widget__state';
-        notice.innerHTML = '';
-        notice.hidden = true;
-      }
-
-      const planBlocked = container.getAttribute('data-plan-blocked') === 'true';
-      const requiresDisable = planBlocked || issues.some((issue) => issue.blockButton);
-      if (requiresDisable) {
-        openBtn.disabled = true;
-        openBtn.classList.add('bould-widget__open--disabled');
-        openBtn.setAttribute('aria-disabled', 'true');
-        const blockingIssue = planBlocked ? null : issues.find((issue) => issue.blockButton);
-        if (blockingIssue) {
-          openBtn.setAttribute('data-disabled-reason', blockingIssue.code);
-          openBtn.setAttribute('title', blockingIssue.message);
-        } else if (!planBlocked) {
-          openBtn.removeAttribute('data-disabled-reason');
-          openBtn.removeAttribute('title');
-        }
-      } else if (!planBlocked) {
-        openBtn.disabled = false;
-        openBtn.classList.remove('bould-widget__open--disabled');
-        openBtn.removeAttribute('aria-disabled');
-        openBtn.removeAttribute('data-disabled-reason');
-        openBtn.removeAttribute('title');
-      }
-    }
-
     function getImmediateGate(designMode){
       if (designMode) {
         return null;
@@ -177,16 +138,9 @@
           message: 'Please log in to your store account to use this feature.',
           tone: 'info',
           action: 'close',
+          blockButton: true,
+          code: 'login-required',
           debug: { reason: 'not_logged_in' }
-        };
-      }
-      if (isPhoneDevice()){
-        return {
-          heading: 'Desktop device required',
-          message: 'The Bould try-on preview currently works on desktop browsers. Please open this page on a desktop to continue.',
-          tone: 'warning',
-          action: 'close',
-          debug: { reason: 'phone_device' }
         };
       }
       return null;
@@ -202,6 +156,8 @@
           message: payload.plan.message || UPGRADE_MESSAGE,
           tone: 'warning',
           action: 'close',
+          blockButton: true,
+          code: 'plan-blocked',
           debug: {
             requestId: payload?.debug?.requestId,
             planId: payload.plan.id,
@@ -213,14 +169,14 @@
       if (!designMode && payload.isProcessed === false){
         const conversionStatus = payload.conversionStatus || 'not_ready';
         let heading = "Garment isn't ready yet";
-        let message = 'Convert this garment in the Bould app to unlock the try-on preview for shoppers.';
+        let message = 'This garment has not been processed yet.';
         let tone = 'warning';
         if (conversionStatus === 'processing'){
           heading = 'Garment still processing';
           message = 'We are still processing this garment. Please wait a few minutes and try again.';
         } else if (conversionStatus === 'failed'){
           heading = 'Garment conversion failed';
-          message = 'Convert this garment again in the Bould app before shoppers can use the try-on feature.';
+          message = 'This garment is not available for try-on.';
           tone = 'error';
         }
         return {
@@ -228,6 +184,8 @@
           message,
           tone,
           action: 'close',
+          blockButton: false,
+          code: 'garment-unprocessed',
           debug: {
             requestId: payload?.debug?.requestId,
             productId: payload.productId || getProductId(),
@@ -260,7 +218,6 @@
     const UPGRADE_MESSAGE = "Upgrade to continue using Bould.";
 
     function applyPlanState(payload){
-      lastStatusPayload = payload || null;
       const plan = payload && payload.plan ? payload.plan : null;
       const blocked = !!(plan && plan.blocked);
       const existingNotice = container.querySelector('.bould-widget__upgrade');
@@ -306,7 +263,6 @@
           openBtn.removeAttribute('aria-disabled');
         }
       }
-      updateAvailabilityState(payload);
     }
 
     async function fetchStatusPayload(){
@@ -433,30 +389,47 @@
     async function open(){
       const designMode = isDesignMode();
       const immediateGate = getImmediateGate(designMode);
+      if (immediateGate){
+        showInlineNotice(immediateGate.message, immediateGate.tone || 'warning');
+        if (immediateGate.blockButton) {
+          setOpenButtonDisabled(true, immediateGate.code || 'immediate-gate', immediateGate.message);
+        }
+        if (immediateGate.debug) {
+          console.info('[Bould Widget] Immediate gate triggered', immediateGate.debug);
+        }
+        return;
+      }
+
+      setOpenButtonDisabled(false);
+
       let preflight = null;
       try{
         preflight = await ensurePlanStatus();
       }catch(e){
         preflight = null;
       }
-      const gate = immediateGate || getPreflightGate(preflight, designMode);
+      const preflightGate = getPreflightGate(preflight, designMode);
+      if (preflightGate){
+        showInlineNotice(preflightGate.message, preflightGate.tone || 'warning');
+        if (preflightGate.blockButton) {
+          setOpenButtonDisabled(true, preflightGate.code || 'preflight-gate', preflightGate.message);
+        } else {
+          setOpenButtonDisabled(false);
+        }
+        if (preflightGate.debug) {
+          console.info('[Bould Widget] Preflight gate triggered', preflightGate.debug);
+        }
+        return;
+      }
 
-      // Move modal to document.body to ensure full-viewport overlay
+      clearInlineNotice();
+      setOpenButtonDisabled(false);
+
       if(!modal.parentElement || modal.parentElement !== document.body){
         document.body.appendChild(modal);
       }
       modal.hidden = false;
       modal.setAttribute('data-state','opening');
-
-      if (gate){
-        showError(gate.message, gate.debug || null, {
-          heading: gate.heading,
-          tone: gate.tone || 'warning',
-          action: gate.action || 'close'
-        });
-        setTimeout(function(){ modal.removeAttribute('data-state'); }, 250);
-        return;
-      }
 
       showScreen('intro');
       setTimeout(function(){ modal.removeAttribute('data-state'); }, 250);
@@ -754,7 +727,6 @@
 
       showScreen('error');
     }
-    updateAvailabilityState(lastStatusPayload);
     ensurePlanStatus();
   });
 })();

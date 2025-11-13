@@ -78,11 +78,6 @@
   margin: 0;
 }
 
-.bould-widget__state ul{
-  margin: 0;
-  padding-left: 18px;
-}
-
 .bould-widget__state--warning{
   background: rgba(255, 196, 13, 0.15);
   border-color: rgba(210, 160, 0, 0.4);
