@@ -4,6 +4,24 @@
     const openBtn = container.querySelector('.bould-widget__open');
     const modal = container.querySelector('.bould-widget');
     const closeBtn = container.querySelector('.bould-widget__close');
+    const loadingScreen = modal ? modal.querySelector('.bould-widget__screen--loading') : null;
+    const loadingStatusEl = loadingScreen ? loadingScreen.querySelector('.bould-widget__loading-text') : null;
+    const loadingFeedbackEl = loadingScreen ? loadingScreen.querySelector('[data-loading-feedback]') : null;
+    const resultScreen = modal ? modal.querySelector('.bould-widget__screen--result') : null;
+    const resultImageEl = resultScreen ? resultScreen.querySelector('.bould-widget__result-image') : null;
+    const resultSizeEl = resultScreen ? resultScreen.querySelector('.bould-widget__size') : null;
+    const resultConfidenceEl = resultScreen ? resultScreen.querySelector('.bould-widget__confidence') : null;
+    const resultFeedbackEl = resultScreen ? resultScreen.querySelector('.bould-widget__feedback') : null;
+    const resultStageEls = resultScreen ? Array.from(resultScreen.querySelectorAll('.bould-widget__result-stage')) : [];
+    const loadingDefaultText = loadingStatusEl ? loadingStatusEl.textContent || '' : '';
+    if (loadingStatusEl && !loadingStatusEl.dataset.defaultText) {
+      loadingStatusEl.dataset.defaultText = loadingDefaultText;
+    }
+    if (loadingFeedbackEl) {
+      loadingFeedbackEl.hidden = true;
+      loadingFeedbackEl.classList.remove('is-visible');
+    }
+    let activeFeedbackCycle = null;
     let statusPromise = null;
     const errorActionButton = modal ? modal.querySelector('.bould-widget__screen--error [data-action]') : null;
     const errorActionDefaults = errorActionButton
@@ -82,6 +100,407 @@
         notice.innerHTML = '';
         notice.hidden = true;
       }
+    }
+
+    function stopFeedbackCycle(forceHide){
+      if (activeFeedbackCycle && typeof activeFeedbackCycle.cancel === 'function') {
+        activeFeedbackCycle.cancel(!!forceHide);
+      }
+      activeFeedbackCycle = null;
+    }
+
+    function resetLoadingMessage(){
+      stopFeedbackCycle(true);
+      if (loadingStatusEl) {
+        loadingStatusEl.hidden = false;
+        const fallbackText = loadingStatusEl.dataset.defaultText || loadingDefaultText;
+        if (fallbackText) {
+          loadingStatusEl.textContent = fallbackText;
+        }
+      }
+      if (loadingFeedbackEl) {
+        loadingFeedbackEl.hidden = true;
+        loadingFeedbackEl.classList.remove('is-visible');
+        loadingFeedbackEl.textContent = '';
+      }
+    }
+
+    function resetResultStage(){
+      resultStageEls.forEach(function(el){
+        if (!el) return;
+        el.classList.remove('is-visible');
+      });
+      if (resultImageEl) {
+        resultImageEl.removeAttribute('src');
+        resultImageEl.hidden = false;
+      }
+      if (resultSizeEl) {
+        resultSizeEl.textContent = '';
+        resultSizeEl.hidden = false;
+      }
+      if (resultConfidenceEl) {
+        resultConfidenceEl.textContent = '';
+        resultConfidenceEl.hidden = false;
+      }
+      if (resultFeedbackEl) {
+        resultFeedbackEl.textContent = '';
+        resultFeedbackEl.hidden = false;
+        resultFeedbackEl.classList.remove('is-visible');
+      }
+    }
+
+    const FEEDBACK_VISIBLE_MS = 2600;
+    const FEEDBACK_FADE_MS = 420;
+    const FEEDBACK_FINAL_SETTLE_MS = 220;
+    const DEFAULT_LOADING_FEEDBACK = [
+      "Sizing assistant is reviewing your fit details...",
+      "Hang tight - preparing your personalized fit notes."
+    ];
+
+    function splitIntoSentences(value){
+      if (!value) return [];
+      const matches = String(value)
+        .replace(/\s+/g, ' ')
+        .match(/[^.!?]+[.!?]*/g);
+      if (!matches) {
+        return [String(value).trim()];
+      }
+      return matches.map(function(part){
+        return part.trim();
+      }).filter(Boolean);
+    }
+
+    function extractFeedbackMessages(data){
+      if (!data || typeof data !== 'object') {
+        return ["We're reviewing your fit details...", "Hang tight - we're rendering your try-on preview now."];
+      }
+      const raw =
+        data.tailor_feedback_sequence ||
+        data.tailor_feedbacks ||
+        data.tailorFeedbackSequence ||
+        data.tailorFeedbacks ||
+        data.tailor_feedback ||
+        data.tailorFeedback;
+      let messages = [];
+      if (Array.isArray(raw)) {
+        messages = raw;
+      } else if (raw && typeof raw === 'object' && Array.isArray(raw.messages)) {
+        messages = raw.messages;
+      } else if (raw !== undefined && raw !== null) {
+        messages = [raw];
+      }
+      messages = messages
+        .map(function(msg){
+          return String(msg || '').replace(/\s+/g, ' ').trim();
+        })
+        .filter(Boolean);
+      if (!messages.length && loadingStatusEl) {
+        const fallback = loadingStatusEl.dataset.defaultText || loadingDefaultText || '';
+        if (fallback) {
+          messages = [fallback];
+        }
+      }
+      if (messages.length === 1) {
+        const first = messages[0];
+        const newlineParts = first.split(/\n+/).map(function(part){
+          return part.replace(/\s+/g, ' ').trim();
+        }).filter(Boolean);
+        if (newlineParts.length >= 2) {
+          messages = [newlineParts[0], newlineParts.slice(1).join(' ').trim()];
+        } else {
+          const sentences = splitIntoSentences(first);
+          if (sentences.length >= 2) {
+            const remainder = sentences.slice(1).join(' ').trim();
+            if (remainder) {
+              messages = [sentences[0], remainder];
+            }
+          }
+        }
+      }
+      const seen = new Set();
+      const deduped = [];
+      messages.forEach(function(msg){
+        if (!seen.has(msg)) {
+          seen.add(msg);
+          deduped.push(msg);
+        }
+      });
+      if (!deduped.length) {
+        deduped.push("We're reviewing your fit details...");
+      }
+      if (deduped.length === 1) {
+        deduped.push("Hang tight - we're rendering your try-on preview now.");
+      }
+      return deduped.slice(0, 3);
+    }
+
+    function startLoadingFeedback(messages, options){
+      const normalized = Array.isArray(messages)
+        ? messages
+            .map(function(msg){
+              return typeof msg === 'string' ? msg.replace(/\s+/g, ' ').trim() : '';
+            })
+            .filter(Boolean)
+        : [];
+      if (!loadingFeedbackEl || !normalized.length) {
+        const fallbackMessage = normalized.length ? normalized[normalized.length - 1] : '';
+        return {
+          promise: Promise.resolve({ finalMessage: fallbackMessage || '', cancelled: false }),
+          cancel: function(){}
+        };
+      }
+
+      const opts = Object.assign(
+        {
+          loop: false,
+          holdMs: FEEDBACK_VISIBLE_MS,
+          fadeMs: FEEDBACK_FADE_MS,
+          finalHoldMs: FEEDBACK_FINAL_SETTLE_MS,
+          initialDelay: 30,
+          hideStatus: true
+        },
+        options || {}
+      );
+
+      const displayEl = loadingFeedbackEl;
+      if (opts.hideStatus && loadingStatusEl) {
+        loadingStatusEl.hidden = true;
+      }
+      displayEl.hidden = false;
+      displayEl.classList.remove('is-visible');
+
+      let resolved = false;
+      let resolveRef = null;
+      const timers = [];
+
+      function clearTimers(){
+        while (timers.length) {
+          clearTimeout(timers.pop());
+        }
+      }
+
+      function finish(cancelled, explicitMessage){
+        if (resolved) return;
+        resolved = true;
+        clearTimers();
+        const finalMessage =
+          explicitMessage !== undefined && explicitMessage !== null && explicitMessage !== ''
+            ? explicitMessage
+            : (displayEl.textContent || normalized[normalized.length - 1] || '');
+        if (resolveRef) {
+          resolveRef({ finalMessage, cancelled });
+        }
+      }
+
+      function showMessage(index){
+        if (!normalized.length) {
+          finish(true, '');
+          return;
+        }
+        const safeIndex = index % normalized.length;
+        const message = normalized[safeIndex];
+        displayEl.textContent = message;
+        requestAnimationFrame(function(){
+          displayEl.classList.add('is-visible');
+        });
+
+        const isLast = safeIndex === normalized.length - 1;
+
+        if (opts.loop) {
+          timers.push(
+            setTimeout(function(){
+              displayEl.classList.remove('is-visible');
+              timers.push(
+                setTimeout(function(){
+                  showMessage((safeIndex + 1) % normalized.length);
+                }, opts.fadeMs)
+              );
+            }, opts.holdMs)
+          );
+          return;
+        }
+
+        if (!isLast) {
+          timers.push(
+            setTimeout(function(){
+              displayEl.classList.remove('is-visible');
+              timers.push(
+                setTimeout(function(){
+                  showMessage(safeIndex + 1);
+                }, opts.fadeMs)
+              );
+            }, opts.holdMs)
+          );
+        } else {
+          timers.push(
+            setTimeout(function(){
+              finish(false, message);
+            }, opts.finalHoldMs)
+          );
+        }
+      }
+
+      const sequencePromise = new Promise(function(resolve){
+        resolveRef = resolve;
+        timers.push(
+          setTimeout(function(){
+            showMessage(0);
+          }, Math.max(0, opts.initialDelay))
+        );
+      });
+
+      const controller = {
+        promise: sequencePromise.then(function(result){
+          if (activeFeedbackCycle === controller) {
+            activeFeedbackCycle = null;
+          }
+          return result;
+        }),
+        cancel: function(forceHide){
+          if (resolved) {
+            if (forceHide) {
+              displayEl.classList.remove('is-visible');
+            }
+            return;
+          }
+          if (forceHide) {
+            displayEl.classList.remove('is-visible');
+          }
+          finish(true);
+        }
+      };
+
+      activeFeedbackCycle = controller;
+      return controller;
+    }
+
+    function loadImageAsset(url){
+      if (!url) {
+        return Promise.resolve({ url: '', loaded: false });
+      }
+      return new Promise(function(resolve){
+        const testImg = new Image();
+        testImg.decoding = 'async';
+        testImg.onload = function(){
+          resolve({ url, loaded: true });
+        };
+        testImg.onerror = function(){
+          resolve({ url, loaded: false });
+        };
+        testImg.src = url;
+      });
+    }
+
+    function loadImageCandidates(urls){
+      const candidates = Array.isArray(urls) ? urls.filter(Boolean) : [];
+      if (!candidates.length) {
+        return Promise.resolve({ url: '', loaded: false });
+      }
+      let index = 0;
+      return new Promise(function(resolve){
+        function attempt(){
+          const currentUrl = candidates[index];
+          loadImageAsset(currentUrl).then(function(result){
+            if (result.loaded) {
+              resolve(result);
+              return;
+            }
+            if (index < candidates.length - 1) {
+              console.warn('[Bould Widget] Try-on image failed to load, trying next candidate', currentUrl);
+              index += 1;
+              attempt();
+              return;
+            }
+            resolve({ url: currentUrl, loaded: false });
+          });
+        }
+        attempt();
+      });
+    }
+
+    function prepareForRequest(){
+      resetResultStage();
+      stopFeedbackCycle(true);
+      if (loadingFeedbackEl) {
+        if (loadingStatusEl) {
+          loadingStatusEl.hidden = true;
+        }
+        loadingFeedbackEl.hidden = false;
+        loadingFeedbackEl.classList.remove('is-visible');
+        loadingFeedbackEl.textContent = '';
+        startLoadingFeedback(DEFAULT_LOADING_FEEDBACK, {
+          loop: true,
+          holdMs: 2000,
+          fadeMs: 280,
+          initialDelay: 0,
+          hideStatus: false
+        });
+      } else {
+        resetLoadingMessage();
+      }
+      showScreen('loading');
+    }
+
+    function revealResultView(details){
+      if (!resultScreen) {
+        return;
+      }
+      if (resultImageEl) {
+        if (details.imageUrl) {
+          resultImageEl.hidden = false;
+          if (resultImageEl.src !== details.imageUrl) {
+            resultImageEl.src = details.imageUrl;
+          }
+        } else {
+          resultImageEl.removeAttribute('src');
+          resultImageEl.hidden = true;
+        }
+      }
+      if (resultSizeEl) {
+        if (details.sizeText) {
+          resultSizeEl.textContent = details.sizeText;
+          resultSizeEl.hidden = false;
+        } else {
+          resultSizeEl.textContent = '';
+          resultSizeEl.hidden = true;
+        }
+      }
+      if (resultConfidenceEl) {
+        if (details.confidenceText) {
+          resultConfidenceEl.textContent = details.confidenceText;
+          resultConfidenceEl.hidden = false;
+        } else {
+          resultConfidenceEl.textContent = '';
+          resultConfidenceEl.hidden = true;
+        }
+      }
+      if (resultFeedbackEl) {
+        if (details.feedbackText) {
+          resultFeedbackEl.textContent = details.feedbackText;
+          resultFeedbackEl.hidden = false;
+        } else {
+          resultFeedbackEl.textContent = '';
+          resultFeedbackEl.hidden = true;
+        }
+        resultFeedbackEl.classList.remove('is-visible');
+      }
+      showScreen('result');
+      requestAnimationFrame(function(){
+        requestAnimationFrame(function(){
+          resultStageEls.forEach(function(el){
+            if (!el) return;
+            if (el === resultImageEl && !details.imageUrl) {
+              el.classList.remove('is-visible');
+              return;
+            }
+            el.classList.add('is-visible');
+          });
+          if (resultFeedbackEl && resultFeedbackEl.classList.contains('bould-widget__fade-text') && details.feedbackText) {
+            resultFeedbackEl.classList.add('is-visible');
+          }
+        });
+      });
+      resetLoadingMessage();
     }
 
     function setOpenButtonDisabled(disabled, reason, title){
@@ -434,7 +853,11 @@
       showScreen('intro');
       setTimeout(function(){ modal.removeAttribute('data-state'); }, 250);
     }
-    function close(){ modal.hidden = true; }
+    function close(){
+      modal.hidden = true;
+      stopFeedbackCycle();
+      resetLoadingMessage();
+    }
 
     openBtn && openBtn.addEventListener('click', open);
     closeBtn && closeBtn.addEventListener('click', close);
@@ -466,7 +889,10 @@
         if (productImageUrl) {
           fd.set('product_image_url', productImageUrl);
         }
-        showScreen('loading');
+        let feedbackMessages = [];
+        let firstFeedbackMessage = '';
+        let finalFeedbackText = '';
+        prepareForRequest();
         try{
           // Determine endpoint: app proxy or absolute API base from settings
           const productId = getProductId();
@@ -563,6 +989,36 @@
           
           const data = await res.json();
           console.log('[Bould Widget] Success response:', data);
+
+          feedbackMessages = extractFeedbackMessages(data);
+          firstFeedbackMessage = feedbackMessages[0] || '';
+          finalFeedbackText = feedbackMessages.join(' ').trim();
+          if (!finalFeedbackText) {
+            finalFeedbackText =
+              firstFeedbackMessage ||
+              (loadingStatusEl ? loadingStatusEl.dataset.defaultText || loadingDefaultText || '' : '');
+          }
+
+          stopFeedbackCycle(true);
+          if (firstFeedbackMessage) {
+            startLoadingFeedback([firstFeedbackMessage], {
+              loop: true,
+              holdMs: 2200,
+              fadeMs: 260,
+              initialDelay: 0,
+              hideStatus: true
+            });
+          } else if (feedbackMessages.length) {
+            startLoadingFeedback(feedbackMessages, {
+              loop: true,
+              holdMs: FEEDBACK_VISIBLE_MS,
+              fadeMs: FEEDBACK_FADE_MS,
+              initialDelay: 0,
+              hideStatus: true
+            });
+          } else if (loadingStatusEl) {
+            loadingStatusEl.hidden = false;
+          }
           
           // If queued (nano provider), poll status until ready
           if (data && data.queued && data.task_id) {
@@ -617,37 +1073,48 @@
             throw new Error(data.error || 'Invalid response from server.');
           }
           
-          // Handle the response based on the API format
-          const img = modal.querySelector('.bould-widget__result-image');
-          const sizeEl = modal.querySelector('.bould-widget__size');
-          const confidenceEl = modal.querySelector('.bould-widget__confidence');
-          const feedbackEl = modal.querySelector('.bould-widget__feedback');
-          
-          // Set the try-on image
-          if(data.tryOnImageUrl){
-            img.src = data.tryOnImageUrl;
-          } else if(data.debug && data.debug.measurement_vis_url){
-            img.src = data.debug.measurement_vis_url;
+          // Derive presentation data
+          const recommendedSizeRaw = data.recommended_size || data.recommendedSize || '';
+          const normalizedSize = String(recommendedSizeRaw || '').trim();
+          const sizeText = 'Recommended size: ' + (normalizedSize || '-');
+          let confidenceText = '';
+          if (data.confidence !== undefined && data.confidence !== null && data.confidence !== '') {
+            const numericConfidence = Number(data.confidence);
+            if (!Number.isNaN(numericConfidence)) {
+              confidenceText = 'Confidence: ' + numericConfidence.toFixed(2) + '%';
+            }
           }
-          
-          // Format and display the recommended size
-          const recommendedSize = data.recommended_size || data.recommendedSize || '-';
-          sizeEl.textContent = 'Recommended size: ' + recommendedSize;
-          
-          // Display confidence with 2 decimal places
-          if(data.confidence !== undefined){
-            const confidence = parseFloat(data.confidence).toFixed(2);
-            confidenceEl.textContent = 'Confidence: ' + confidence + '%';
+
+          const imageCandidates = [];
+          if (data.tryOnImageUrl) imageCandidates.push(data.tryOnImageUrl);
+          if (data.try_on_image_url && data.try_on_image_url !== data.tryOnImageUrl) imageCandidates.push(data.try_on_image_url);
+          if (data.tryonImageUrl && data.tryonImageUrl !== data.tryOnImageUrl) imageCandidates.push(data.tryonImageUrl);
+          if (data.debug && data.debug.measurement_vis_url) imageCandidates.push(data.debug.measurement_vis_url);
+
+          const imageResult = await loadImageCandidates(imageCandidates);
+
+          stopFeedbackCycle(true);
+
+          if (modal.hidden) {
+            console.info('[Bould Widget] Modal closed before result reveal.');
+            resetLoadingMessage();
+            return;
           }
-          
-          // Display tailor feedback if available
-          if(data.tailor_feedback){
-            feedbackEl.textContent = data.tailor_feedback;
-          }
-          
-          showScreen('result');
+
+          const resolvedImageUrl = imageResult && imageResult.loaded ? imageResult.url : '';
+          const displayFeedbackText =
+            (finalFeedbackText || '').trim() ||
+            (loadingStatusEl ? loadingStatusEl.dataset.defaultText || loadingDefaultText || '' : '');
+
+          revealResultView({
+            imageUrl: resolvedImageUrl,
+            sizeText,
+            confidenceText,
+            feedbackText: displayFeedbackText
+          });
         }catch(err){
           console.error('[Bould Widget] Error occurred:', err);
+          resetLoadingMessage();
 
           let message = (err && err.message ? err.message : 'Unknown error occurred. Please try again.');
           if (err && err.name === 'AbortError') {

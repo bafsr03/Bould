@@ -60,14 +60,17 @@
     </div>
 
     <div class="bould-widget__screen bould-widget__screen--loading" data-screen="loading" hidden>
-      <p>Analyzing your image and creating a try‑on…</p>
+      <div class="bould-widget__loading-state" data-loading-state>
+        <p class="bould-widget__loading-text">Analyzing your image and creating a try‑on…</p>
+      </div>
+      <p class="bould-widget__loading-feedback bould-widget__fade-text" data-loading-feedback hidden></p>
     </div>
 
     <div class="bould-widget__screen bould-widget__screen--result" data-screen="result" hidden>
-      <img class="bould-widget__result-image" alt="Try on result" />
-      <h4 class="bould-widget__size"></h4>
-      <p class="bould-widget__confidence"></p>
-      <p class="bould-widget__feedback"></p>
+      <img class="bould-widget__result-image bould-widget__result-stage" alt="Try on result" />
+      <h4 class="bould-widget__size bould-widget__result-stage"></h4>
+      <p class="bould-widget__confidence bould-widget__result-stage"></p>
+      <p class="bould-widget__feedback bould-widget__result-stage bould-widget__fade-text"></p>
       <div class="bould-widget__actions">
         <button type="button" data-action="close" class="bould-btn">Done</button>
       </div>
