@@ -23,6 +23,10 @@
     }
     let activeFeedbackCycle = null;
     let statusPromise = null;
+    let defaultFeedbackController = null;
+    let defaultFeedbackPromise = null;
+    let tailoredFeedbackController = null;
+    let tailoredFeedbackPromise = null;
     const errorActionButton = modal ? modal.querySelector('.bould-widget__screen--error [data-action]') : null;
     const errorActionDefaults = errorActionButton
       ? {
@@ -123,6 +127,10 @@
         loadingFeedbackEl.classList.remove('is-visible');
         loadingFeedbackEl.textContent = '';
       }
+      defaultFeedbackController = null;
+      defaultFeedbackPromise = null;
+      tailoredFeedbackController = null;
+      tailoredFeedbackPromise = null;
     }
 
     function resetResultStage(){
@@ -257,7 +265,8 @@
           fadeMs: FEEDBACK_FADE_MS,
           finalHoldMs: FEEDBACK_FINAL_SETTLE_MS,
           initialDelay: 30,
-          hideStatus: true
+          hideStatus: true,
+          loopCount: null
         },
         options || {}
       );
@@ -272,6 +281,8 @@
       let resolved = false;
       let resolveRef = null;
       const timers = [];
+      const maxLoops = typeof opts.loopCount === 'number' && opts.loopCount > 0 ? opts.loopCount : null;
+      let loopsCompleted = 0;
 
       function clearTimers(){
         while (timers.length) {
@@ -309,10 +320,19 @@
         if (opts.loop) {
           timers.push(
             setTimeout(function(){
+              const nextIndex = (safeIndex + 1) % normalized.length;
+              const completesCycle = nextIndex === 0;
+              if (completesCycle) {
+                loopsCompleted += 1;
+                if (maxLoops && loopsCompleted >= maxLoops) {
+                  finish(false, message);
+                  return;
+                }
+              }
               displayEl.classList.remove('is-visible');
               timers.push(
                 setTimeout(function(){
-                  showMessage((safeIndex + 1) % normalized.length);
+                  showMessage(nextIndex);
                 }, opts.fadeMs)
               );
             }, opts.holdMs)
@@ -419,8 +439,12 @@
     }
 
     function prepareForRequest(){
-      resetResultStage();
       stopFeedbackCycle(true);
+      resetResultStage();
+      defaultFeedbackController = null;
+      defaultFeedbackPromise = null;
+      tailoredFeedbackController = null;
+      tailoredFeedbackPromise = null;
       if (loadingFeedbackEl) {
         if (loadingStatusEl) {
           loadingStatusEl.hidden = true;
@@ -428,13 +452,15 @@
         loadingFeedbackEl.hidden = false;
         loadingFeedbackEl.classList.remove('is-visible');
         loadingFeedbackEl.textContent = '';
-        startLoadingFeedback(DEFAULT_LOADING_FEEDBACK, {
+        defaultFeedbackController = startLoadingFeedback(DEFAULT_LOADING_FEEDBACK, {
           loop: true,
+          loopCount: 2,
           holdMs: 2000,
           fadeMs: 280,
           initialDelay: 0,
           hideStatus: false
         });
+        defaultFeedbackPromise = defaultFeedbackController ? defaultFeedbackController.promise : null;
       } else {
         resetLoadingMessage();
       }
@@ -990,8 +1016,11 @@
           const data = await res.json();
           console.log('[Bould Widget] Success response:', data);
 
-          feedbackMessages = extractFeedbackMessages(data);
-          firstFeedbackMessage = feedbackMessages[0] || '';
+          feedbackMessages = extractFeedbackMessages(data).slice(0, 3);
+          if (!feedbackMessages.length && firstFeedbackMessage) {
+            feedbackMessages = [firstFeedbackMessage];
+          }
+          firstFeedbackMessage = feedbackMessages[0] || firstFeedbackMessage || '';
           finalFeedbackText = feedbackMessages.join(' ').trim();
           if (!finalFeedbackText) {
             finalFeedbackText =
@@ -999,26 +1028,29 @@
               (loadingStatusEl ? loadingStatusEl.dataset.defaultText || loadingDefaultText || '' : '');
           }
 
-          stopFeedbackCycle(true);
-          if (firstFeedbackMessage) {
-            startLoadingFeedback([firstFeedbackMessage], {
-              loop: true,
-              holdMs: 2200,
-              fadeMs: 260,
-              initialDelay: 0,
-              hideStatus: true
-            });
-          } else if (feedbackMessages.length) {
-            startLoadingFeedback(feedbackMessages, {
-              loop: true,
-              holdMs: FEEDBACK_VISIBLE_MS,
-              fadeMs: FEEDBACK_FADE_MS,
-              initialDelay: 0,
-              hideStatus: true
-            });
-          } else if (loadingStatusEl) {
-            loadingStatusEl.hidden = false;
+          if (defaultFeedbackPromise) {
+            try {
+              await defaultFeedbackPromise;
+            } catch (defaultCycleError) {
+              console.info('[Bould Widget] Default feedback sequence ended early', defaultCycleError);
+            }
           }
+          stopFeedbackCycle(false);
+          defaultFeedbackController = null;
+          defaultFeedbackPromise = null;
+
+          const tailoredMessages = (feedbackMessages.length ? feedbackMessages : [
+            finalFeedbackText || firstFeedbackMessage || DEFAULT_LOADING_FEEDBACK[DEFAULT_LOADING_FEEDBACK.length - 1]
+          ]).slice(0, 3);
+          tailoredFeedbackController = startLoadingFeedback(tailoredMessages, {
+            loop: true,
+            loopCount: 3,
+            holdMs: 2400,
+            fadeMs: 320,
+            initialDelay: 0,
+            hideStatus: true
+          });
+          tailoredFeedbackPromise = tailoredFeedbackController ? tailoredFeedbackController.promise : null;
           
           // If queued (nano provider), poll status until ready
           if (data && data.queued && data.task_id) {
@@ -1093,6 +1125,18 @@
 
           const imageResult = await loadImageCandidates(imageCandidates);
 
+          if (tailoredFeedbackController && typeof tailoredFeedbackController.cancel === 'function') {
+            tailoredFeedbackController.cancel(true);
+          }
+          if (tailoredFeedbackPromise) {
+            try {
+              await tailoredFeedbackPromise;
+            } catch (tailoredCycleError) {
+              console.info('[Bould Widget] Tailored feedback sequence ended early', tailoredCycleError);
+            }
+          }
+          tailoredFeedbackController = null;
+          tailoredFeedbackPromise = null;
           stopFeedbackCycle(true);
 
           if (modal.hidden) {
