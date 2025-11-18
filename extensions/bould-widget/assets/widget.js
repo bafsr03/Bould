@@ -13,6 +13,14 @@
     const resultConfidenceEl = resultScreen ? resultScreen.querySelector('.bould-widget__confidence') : null;
     const resultFeedbackEl = resultScreen ? resultScreen.querySelector('.bould-widget__feedback') : null;
     const resultStageEls = resultScreen ? Array.from(resultScreen.querySelectorAll('.bould-widget__result-stage')) : [];
+    const widgetIdRaw = container.getAttribute('data-block-id') || '';
+    const widgetViewerId = widgetIdRaw || Math.random().toString(36).slice(2, 8);
+    const imageViewer = createImageViewer(widgetViewerId);
+    const imageViewerImage = imageViewer ? imageViewer.querySelector('.bould-widget__image-viewer__img') : null;
+    const imageViewerCloseBtn = imageViewer ? imageViewer.querySelector('.bould-widget__image-viewer__close') : null;
+    const imageViewerFrame = imageViewer ? imageViewer.querySelector('.bould-widget__image-viewer__frame') : null;
+    let imageViewerHideTimer = null;
+    let imageViewerReturnFocusEl = null;
     const loadingDefaultText = loadingStatusEl ? loadingStatusEl.textContent || '' : '';
     if (loadingStatusEl && !loadingStatusEl.dataset.defaultText) {
       loadingStatusEl.dataset.defaultText = loadingDefaultText;
@@ -35,6 +43,105 @@
         }
       : { label: 'Try again', action: 'back-to-form' };
     const DEFAULT_ERROR_HEADING = 'Something went wrong';
+
+    const header = modal ? modal.querySelector('.bould-widget__header') : null;
+    const headerEyebrow = header ? header.querySelector('.bould-widget__eyebrow') : null;
+    const headerTitle = header ? header.querySelector('.bould-widget__title') : null;
+    const headerSubtitle = header ? header.querySelector('.bould-widget__subtitle') : null;
+    const headerDefaults = {
+      eyebrow: headerEyebrow ? headerEyebrow.textContent.trim() : '',
+      title: headerTitle ? headerTitle.textContent.trim() : '',
+      subtitle: headerSubtitle ? headerSubtitle.textContent.trim() : ''
+    };
+    const FALLBACK_DIALOG_LABEL = 'Bould fit assistant';
+    const HEADER_CONFIG = {
+      intro: {
+        title: headerDefaults.title || 'Find your best fit',
+        subtitle:
+          headerDefaults.subtitle ||
+          'Upload a T-pose photo to unlock a personalized size recommendation.',
+        compact: false,
+        describe: true
+      },
+      loading: {
+        title: 'Finding your best fit',
+        subtitle: '',
+        compact: false,
+        describe: false
+      },
+      form: {
+        compact: true,
+        ariaLabel: 'Bould fit assistant form'
+      },
+      result: {
+        compact: true,
+        ariaLabel: 'Bould fit assistant result'
+      },
+      error: {
+        compact: true,
+        ariaLabel: 'Bould fit assistant error'
+      }
+    };
+
+    updateHeaderForScreen('intro');
+
+    function updateHeaderForScreen(name){
+      const config = HEADER_CONFIG[name] || HEADER_CONFIG.form || {};
+      const eyebrowText = typeof config.eyebrow === 'string' ? config.eyebrow : '';
+      const titleText = typeof config.title === 'string' ? config.title : '';
+      const subtitleText = typeof config.subtitle === 'string' ? config.subtitle : '';
+      const describe = !!config.describe;
+
+      if (header) {
+        header.classList.toggle('bould-widget__header--compact', !!config.compact);
+      }
+
+      if (headerEyebrow) {
+        if (eyebrowText) {
+          headerEyebrow.hidden = false;
+          headerEyebrow.textContent = eyebrowText;
+        } else {
+          headerEyebrow.hidden = true;
+          headerEyebrow.textContent = headerDefaults.eyebrow;
+        }
+      }
+
+      if (headerTitle) {
+        if (titleText) {
+          headerTitle.hidden = false;
+          headerTitle.textContent = titleText;
+        } else {
+          headerTitle.hidden = true;
+          headerTitle.textContent = '';
+        }
+      }
+
+      if (headerSubtitle) {
+        if (subtitleText) {
+          headerSubtitle.hidden = false;
+          headerSubtitle.textContent = subtitleText;
+        } else {
+          headerSubtitle.hidden = true;
+          headerSubtitle.textContent = '';
+        }
+      }
+
+      if (modal) {
+        if (titleText && headerTitle && !headerTitle.hidden) {
+          modal.setAttribute('aria-labelledby', headerTitle.id);
+          modal.removeAttribute('aria-label');
+        } else {
+          modal.removeAttribute('aria-labelledby');
+          modal.setAttribute('aria-label', config.ariaLabel || FALLBACK_DIALOG_LABEL);
+        }
+
+        if (describe && headerSubtitle && !headerSubtitle.hidden) {
+          modal.setAttribute('aria-describedby', headerSubtitle.id);
+        } else {
+          modal.removeAttribute('aria-describedby');
+        }
+      }
+    }
 
     function escapeHtml(value){
       return String(value ?? '')
@@ -68,6 +175,123 @@
       const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
       const narrow = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 820px)').matches;
       return matchesUa || (coarse && narrow);
+    }
+
+    function createImageViewer(widgetId){
+      if (typeof document === 'undefined' || !document.body) {
+        return null;
+      }
+      if (widgetId) {
+        const candidates = document.querySelectorAll('.bould-widget__image-viewer');
+        for (let i = 0; i < candidates.length; i += 1){
+          const candidate = candidates[i];
+          if (candidate && candidate.getAttribute('data-widget-id') === widgetId){
+            return candidate;
+          }
+        }
+      }
+      const viewer = document.createElement('div');
+      viewer.className = 'bould-widget__image-viewer';
+      if (widgetId) {
+        viewer.setAttribute('data-widget-id', widgetId);
+      }
+      viewer.hidden = true;
+      viewer.setAttribute('aria-hidden', 'true');
+
+      const frame = document.createElement('div');
+      frame.className = 'bould-widget__image-viewer__frame';
+      frame.setAttribute('role', 'dialog');
+      frame.setAttribute('aria-modal', 'true');
+      frame.setAttribute('aria-label', 'Result preview');
+      frame.tabIndex = -1;
+
+      const closeButton = document.createElement('button');
+      closeButton.type = 'button';
+      closeButton.className = 'bould-widget__image-viewer__close';
+      closeButton.setAttribute('aria-label', 'Close result preview');
+      closeButton.textContent = '×';
+
+      const image = document.createElement('img');
+      image.className = 'bould-widget__image-viewer__img';
+      image.alt = 'Try on result preview';
+
+      frame.appendChild(closeButton);
+      frame.appendChild(image);
+      viewer.appendChild(frame);
+      document.body.appendChild(viewer);
+      return viewer;
+    }
+
+    function openImageViewer(src, altText, originEl){
+      if (!imageViewer || !imageViewerImage || !src) {
+        return;
+      }
+      if (imageViewerHideTimer) {
+        clearTimeout(imageViewerHideTimer);
+        imageViewerHideTimer = null;
+      }
+      imageViewerReturnFocusEl = originEl instanceof HTMLElement ? originEl : null;
+      imageViewerImage.src = src;
+      imageViewerImage.alt = altText || 'Try on result';
+      if (imageViewerFrame) {
+        imageViewerFrame.setAttribute('aria-label', altText ? 'Result preview: ' + altText : 'Result preview');
+      }
+      imageViewer.hidden = false;
+      imageViewer.setAttribute('aria-hidden', 'false');
+      requestAnimationFrame(function(){
+        imageViewer.classList.add('is-visible');
+      });
+      document.addEventListener('keydown', handleImageViewerKeydown);
+      if (imageViewerCloseBtn && typeof imageViewerCloseBtn.focus === 'function') {
+        setTimeout(function(){
+          try{
+            imageViewerCloseBtn.focus({ preventScroll: true });
+          }catch(e){
+            imageViewerCloseBtn.focus();
+          }
+        }, 50);
+      }
+    }
+
+    function closeImageViewer(forceImmediate){
+      if (!imageViewer || imageViewer.hidden) {
+        return;
+      }
+      if (imageViewerHideTimer) {
+        clearTimeout(imageViewerHideTimer);
+        imageViewerHideTimer = null;
+      }
+      imageViewer.classList.remove('is-visible');
+      document.removeEventListener('keydown', handleImageViewerKeydown);
+      const finalize = function(){
+        imageViewerHideTimer = null;
+        if (imageViewerImage) {
+          imageViewerImage.removeAttribute('src');
+        }
+        imageViewer.setAttribute('aria-hidden', 'true');
+        imageViewer.hidden = true;
+        if (imageViewerReturnFocusEl && typeof imageViewerReturnFocusEl.focus === 'function') {
+          try{
+            imageViewerReturnFocusEl.focus({ preventScroll: true });
+          }catch(e){
+            imageViewerReturnFocusEl.focus();
+          }
+        }
+        imageViewerReturnFocusEl = null;
+      };
+      if (forceImmediate) {
+        finalize();
+      } else {
+        imageViewerHideTimer = setTimeout(finalize, 200);
+      }
+    }
+
+    function handleImageViewerKeydown(event){
+      if (!event) return;
+      if (event.key === 'Escape' || event.key === 'Esc') {
+        event.preventDefault();
+        closeImageViewer();
+      }
     }
 
     function ensureStateNotice(){
@@ -176,6 +400,44 @@
       return matches.map(function(part){
         return part.trim();
       }).filter(Boolean);
+    }
+
+    function formatMetricName(metric){
+      return String(metric || '')
+        .split('_')
+        .map(function(part){
+          if (!part) return '';
+          return part.charAt(0).toUpperCase() + part.slice(1);
+        })
+        .filter(Boolean)
+        .join(' ');
+    }
+
+    function summarizeSlack(matchDetails, preferredUnit){
+      if (!matchDetails || typeof matchDetails !== 'object') return '';
+      const unitKey = preferredUnit === 'inch' ? 'slacks_in' : 'slacks_cm';
+      const slackObj = matchDetails[unitKey];
+      if (!slackObj || typeof slackObj !== 'object') return '';
+      const entries = Object.entries(slackObj)
+        .map(function(entry){
+          const metric = entry[0];
+          const rawValue = Number(entry[1]);
+          if (!metric || Number.isNaN(rawValue)) return null;
+          return [metric, rawValue];
+        })
+        .filter(Boolean)
+        .sort(function(a, b){
+          return Math.abs(b[1]) - Math.abs(a[1]);
+        });
+      if (!entries.length) return '';
+      const topEntries = entries.slice(0, 3).map(function(entry){
+        const metric = formatMetricName(entry[0]);
+        const value = entry[1];
+        const formatted = (value > 0 ? '+' : '') + value.toFixed(1);
+        return metric + ' ' + formatted;
+      });
+      const unitLabel = preferredUnit === 'inch' ? 'in' : 'cm';
+      return 'Slack (' + unitLabel + '): ' + topEntries.join(', ');
     }
 
     function extractFeedbackMessages(data){
@@ -761,9 +1023,12 @@
     }
 
     function showScreen(name){
-      modal.querySelectorAll('.bould-widget__screen').forEach(function(s){
-        s.hidden = s.dataset.screen !== name;
-      });
+      if (modal) {
+        modal.querySelectorAll('.bould-widget__screen').forEach(function(s){
+          s.hidden = s.dataset.screen !== name;
+        });
+      }
+      updateHeaderForScreen(name);
     }
 
     function getProductId(){
@@ -881,6 +1146,7 @@
     }
     function close(){
       modal.hidden = true;
+      closeImageViewer(true);
       stopFeedbackCycle();
       resetLoadingMessage();
     }
@@ -901,13 +1167,83 @@
       }
     });
 
+    if (imageViewer) {
+      imageViewer.addEventListener('click', function(event){
+        if (!imageViewerFrame || event.target === imageViewer || !imageViewerFrame.contains(event.target)){
+          closeImageViewer();
+        }
+      });
+    }
+
+    if (imageViewerCloseBtn) {
+      imageViewerCloseBtn.addEventListener('click', function(event){
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        closeImageViewer();
+      });
+    }
+
+    if (imageViewerFrame) {
+      imageViewerFrame.addEventListener('click', function(event){
+        event.stopPropagation();
+      });
+    }
+
+    if (resultImageEl) {
+      resultImageEl.addEventListener('click', function(){
+        const src = resultImageEl.getAttribute('src');
+        if (!src) return;
+        const altText = resultImageEl.getAttribute('alt') || 'Try on result';
+        if (isPhoneDevice()) {
+          if (imageViewer) {
+            openImageViewer(src, altText, resultImageEl);
+            return;
+          }
+        }
+        const popup = window.open(src, '_blank', 'noopener');
+        if (popup && typeof popup === 'object') {
+          try{
+            popup.opener = null;
+          }catch(e){}
+        } else {
+          window.location.href = src;
+        }
+      });
+    }
+
     const form = container.querySelector('.bould-widget__form');
     if(form){
+      const heightInput = form.querySelector('input[name="height"]');
+      const unitSelect = form.querySelector('select[name="body_unit"]');
+
+      function updateHeightFieldAttributes(){
+        if (!heightInput) return;
+        const selected = unitSelect ? String(unitSelect.value || '').toLowerCase() : 'cm';
+        if (selected === 'inch' || selected === 'inches' || selected === 'in') {
+          heightInput.placeholder = 'Height (in)';
+          heightInput.min = '31';
+          heightInput.max = '99';
+        } else {
+          heightInput.placeholder = 'Height (cm)';
+          heightInput.min = '80';
+          heightInput.max = '250';
+        }
+      }
+
+      updateHeightFieldAttributes();
+      if (unitSelect) {
+        unitSelect.addEventListener('change', updateHeightFieldAttributes);
+      }
+
       form.addEventListener('submit', async function(e){
         e.preventDefault();
         const fd = new FormData(form);
         const file = fd.get('user_image');
         const height = fd.get('height');
+        const bodyUnitRaw = fd.get('body_unit');
+        const bodyUnit = typeof bodyUnitRaw === 'string' ? bodyUnitRaw.toLowerCase() : 'cm';
         const productImageUrl = getProductImageUrl();
         if(!(file instanceof File) || !height){
           return showError('Missing image or height.');
@@ -933,6 +1269,7 @@
             imageSize: file instanceof File ? file.size : 'N/A',
             height: height,
             imageType: file instanceof File ? file.type : 'N/A',
+            bodyUnit: bodyUnit,
             productId,
             correlationId,
             productImageUrl
@@ -1015,6 +1352,10 @@
           
           const data = await res.json();
           console.log('[Bould Widget] Success response:', data);
+
+          const displayUnitRaw = typeof data.display_unit === 'string' ? data.display_unit : bodyUnit;
+          const displayUnit = String(displayUnitRaw || 'cm').toLowerCase() === 'inch' ? 'inch' : 'cm';
+          const matchDetails = data && typeof data === 'object' ? data.match_details || data.matchDetails || {} : {};
 
           feedbackMessages = extractFeedbackMessages(data).slice(0, 3);
           if (!feedbackMessages.length && firstFeedbackMessage) {
@@ -1108,6 +1449,7 @@
           // Derive presentation data
           const recommendedSizeRaw = data.recommended_size || data.recommendedSize || '';
           const normalizedSize = String(recommendedSizeRaw || '').trim();
+          const unitLabelLong = displayUnit === 'inch' ? 'inches' : 'centimeters';
           const sizeText = 'Recommended size: ' + (normalizedSize || '-');
           let confidenceText = '';
           if (data.confidence !== undefined && data.confidence !== null && data.confidence !== '') {
@@ -1115,6 +1457,15 @@
             if (!Number.isNaN(numericConfidence)) {
               confidenceText = 'Confidence: ' + numericConfidence.toFixed(2) + '%';
             }
+          }
+          const slackSummary = summarizeSlack(matchDetails, displayUnit);
+          if (confidenceText) {
+            confidenceText += ' • Measurements in ' + unitLabelLong;
+          } else {
+            confidenceText = 'Measurements in ' + unitLabelLong;
+          }
+          if (slackSummary) {
+            confidenceText += ' • ' + slackSummary;
           }
 
           const imageCandidates = [];

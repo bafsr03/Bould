@@ -228,6 +228,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     const formData = await request.formData();
     const height = formData.get("height");
+    const bodyUnitRaw = formData.get("body_unit");
+    const normalizedBodyUnit = (() => {
+      if (typeof bodyUnitRaw !== "string") return "cm";
+      const trimmed = bodyUnitRaw.trim().toLowerCase();
+      if (["inch", "inches", "in"].includes(trimmed)) return "inch";
+      if (["cm", "centimeter", "centimeters"].includes(trimmed)) return "cm";
+      return "cm";
+    })();
     const userImage = formData.get("user_image");
 
     // Enhanced input validation with detailed logging
@@ -246,14 +254,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     const heightNum = parseFloat(height);
-    if (isNaN(heightNum) || heightNum < 80 || heightNum > 250) {
+    const heightCm = normalizedBodyUnit === "inch" ? heightNum * 2.54 : heightNum;
+    const isHeightValid = !Number.isNaN(heightNum) && heightCm >= 80 && heightCm <= 250;
+    if (!isHeightValid) {
+      const heightRangeMessage =
+        normalizedBodyUnit === "inch"
+          ? "Height must be between 31 and 98 inches"
+          : "Height must be between 80 and 250 cm";
       logRequest('POST', '/apps/bould-widget', 400, Date.now() - startTime, { 
         requestId, 
         error: 'Invalid height',
-        height: heightNum
+        height: heightNum,
+        bodyUnit: normalizedBodyUnit
       });
       return json({ 
-        error: "Height must be between 80 and 250 cm",
+        error: heightRangeMessage,
         debug: { requestId }
       }, { status: 400 });
     }
@@ -417,6 +432,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     recFd.append('category_id', String(conversionRecord.categoryId));
     recFd.append('true_size', String(conversionRecord.trueSize));
     recFd.append('unit', String(conversionRecord.unit || 'cm'));
+    recFd.append('body_unit', normalizedBodyUnit);
+    recFd.append('display_unit', normalizedBodyUnit);
+    if (conversionRecord?.trueWaist) {
+      recFd.append('true_waist', String(conversionRecord.trueWaist));
+    }
 
     const recRes = await fetchWithRetry(`${base}/v1/recommend`, {
       method: 'POST',
@@ -455,6 +475,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
     const tryData: any = await tryRes.json().catch(() => ({}));
     let response: any;
+    const matchedDisplayUnit = typeof recData?.display_unit === 'string' ? recData.display_unit : normalizedBodyUnit;
+    const matchDetails = recData?.match_details;
+
     if (tryRes.status === 202 || tryData?.status === 'queued' || tryData?.provider === 'nano' && (tryData?.task_id || tryData?.task)) {
       const taskId = tryData?.task_id || tryData?.task?.id || tryData?.task?.taskId;
       response = {
@@ -464,6 +487,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         recommended_size: recData.recommended_size || recData.recommendedSize,
         confidence: recData.confidence,
         tailor_feedback: recData.tailor_feedback || recData.tailorFeedback,
+        display_unit: matchedDisplayUnit,
+        match_details: matchDetails,
         debug: { requestId, productId, conversionStatus, correlationId: clientCorrelationId }
       };
     } else {
@@ -474,6 +499,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         recommended_size: recData.recommended_size || recData.recommendedSize,
         confidence: recData.confidence,
         tailor_feedback: recData.tailor_feedback || recData.tailorFeedback,
+        display_unit: matchedDisplayUnit,
+        match_details: matchDetails,
         debug: { measurement_vis_url: recData?.debug?.measurement_vis_url || '', requestId, productId, conversionStatus, correlationId: clientCorrelationId }
       };
     }
