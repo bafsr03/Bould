@@ -1684,6 +1684,13 @@
 
           const data = await res.json();
           console.log('[Bould Widget] Success response:', data);
+          console.log('[Bould Widget] Response analysis:', {
+            queued: data.queued,
+            hasTaskId: !!data.task_id,
+            taskId: data.task_id,
+            hasTryOnImage: !!(data.tryOnImageUrl || data.try_on_image_url || data.tryonImageUrl),
+            recommendedSize: data.recommended_size || data.recommendedSize
+          });
 
           const displayUnitRaw = typeof data.display_unit === 'string' ? data.display_unit : bodyUnit;
           const displayUnit = String(displayUnitRaw || 'cm').toLowerCase() === 'inch' ? 'inch' : 'cm';
@@ -1701,6 +1708,9 @@
               (loadingStatusEl ? loadingStatusEl.dataset.defaultText || loadingDefaultText || '' : '');
           }
 
+
+          // Stop the feedback cycle first so the promise can resolve
+          stopFeedbackCycle(false);
           if (defaultFeedbackPromise) {
             try {
               await defaultFeedbackPromise;
@@ -1708,7 +1718,6 @@
               console.info('[Bould Widget] Default feedback sequence ended early', defaultCycleError);
             }
           }
-          stopFeedbackCycle(false);
           defaultFeedbackController = null;
           defaultFeedbackPromise = null;
 
@@ -1725,7 +1734,11 @@
           tailoredFeedbackPromise = tailoredFeedbackController ? tailoredFeedbackController.promise : null;
 
           // If queued (nano provider), poll status until ready
-          if (data && data.queued && data.task_id) {
+          if (data && data.queued) {
+            if (!data.task_id) {
+              console.error('[Bould Widget] Queued response missing task_id:', data);
+              throw new Error('The try-on service queued your request but did not provide a task ID. Please try again or contact support.');
+            }
             console.log('[Bould Widget] Try-on queued. Polling for completion. task_id=', data.task_id);
             const start = Date.now();
             const maxMs = 55000; // keep under Shopify proxy cap
@@ -1734,13 +1747,19 @@
             let attempt = 0;
             while (Date.now() - start < maxMs) {
               await new Promise(r => setTimeout(r, pollDelay));
+              attempt += 1;
+              console.log(`[Bould Widget] Polling attempt #${attempt}, elapsed: ${Date.now() - start}ms`);
               try {
                 const statusUrl = `${endpointBase}?intent=tryon_status&task_id=${encodeURIComponent(taskId)}`;
+                console.log('[Bould Widget] Polling URL:', statusUrl);
                 const stRes = await fetch(statusUrl, { headers: { 'Accept': 'application/json', 'X-Correlation-ID': correlationId } });
+                console.log('[Bould Widget] Poll response status:', stRes.status);
                 if (stRes.ok) {
                   const st = await stRes.json();
+                  console.log('[Bould Widget] Poll response data:', st);
                   if (st && st.result_image_url) {
                     // Merge into data shape
+                    console.log('[Bould Widget] Try-on complete! Image URL:', st.result_image_url);
                     data.tryOnImageUrl = st.result_image_url;
                     break;
                   }
@@ -1752,12 +1771,10 @@
                       throw new Error(`Try-on failed: ${reason}`);
                     }
                   }
-                  attempt += 1;
                 }
                 else {
                   const text = await stRes.text().catch(() => '');
                   console.warn('[Bould Widget] Status poll failed', stRes.status, text);
-                  attempt += 1;
                 }
               } catch (pe) {
                 // continue polling
@@ -1765,8 +1782,11 @@
               }
             }
             if (!data.tryOnImageUrl) {
+              console.error('[Bould Widget] Polling timed out after', Date.now() - start, 'ms');
               throw new Error('The request timed out before the try-on image was ready. Please try again.');
             }
+          } else {
+            console.log('[Bould Widget] Not a queued response, proceeding with synchronous result');
           }
 
           // Check if garment processing is complete
@@ -1810,13 +1830,7 @@
           if (tailoredFeedbackController && typeof tailoredFeedbackController.cancel === 'function') {
             tailoredFeedbackController.cancel(true);
           }
-          if (tailoredFeedbackPromise) {
-            try {
-              await tailoredFeedbackPromise;
-            } catch (tailoredCycleError) {
-              console.info('[Bould Widget] Tailored feedback sequence ended early', tailoredCycleError);
-            }
-          }
+          // Don't await tailoredFeedbackPromise - it's set to loop indefinitely and we've already cancelled it
           tailoredFeedbackController = null;
           tailoredFeedbackPromise = null;
           stopFeedbackCycle(true);

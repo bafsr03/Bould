@@ -470,6 +470,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       );
     }
     const tryData = await tryRes.json().catch(() => ({}));
+    console.log('[Bould Proxy] Try-on service response:', { status: tryRes.status, data: tryData });
 
     // If provider queues work (nano), bubble up task id so widget can poll
     if (
@@ -486,6 +487,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         tryData?.task?.data?.taskId ||
         tryData?.task?.data?.jobId ||
         tryData?.task?.data?.job_id;
+
+      console.log('[Bould Proxy] Extracted task_id:', taskId, 'from tryData:', tryData);
+
       const queuedResponse = {
         queued: true,
         task_id: taskId,
@@ -521,7 +525,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         requestId,
         productId,
         queued: true,
+        taskId,
       });
+      console.log('[Bould Proxy] Returning queued response:', queuedResponse);
       return json(queuedResponse, { status: 202, headers: { "X-Correlation-ID": clientCorrelationId || requestId } });
     }
 
