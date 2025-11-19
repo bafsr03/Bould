@@ -7,12 +7,19 @@
     const loadingScreen = modal ? modal.querySelector('.bould-widget__screen--loading') : null;
     const loadingStatusEl = loadingScreen ? loadingScreen.querySelector('.bould-widget__loading-text') : null;
     const loadingFeedbackEl = loadingScreen ? loadingScreen.querySelector('[data-loading-feedback]') : null;
+    const loadingGeneratingEl = loadingScreen ? loadingScreen.querySelector('[data-loading-generating]') : null;
     const resultScreen = modal ? modal.querySelector('.bould-widget__screen--result') : null;
     const resultImageEl = resultScreen ? resultScreen.querySelector('.bould-widget__result-image') : null;
     const resultSizeEl = resultScreen ? resultScreen.querySelector('.bould-widget__size') : null;
     const resultConfidenceEl = resultScreen ? resultScreen.querySelector('.bould-widget__confidence') : null;
     const resultFeedbackEl = resultScreen ? resultScreen.querySelector('.bould-widget__feedback') : null;
     const resultStageEls = resultScreen ? Array.from(resultScreen.querySelectorAll('.bould-widget__result-stage')) : [];
+    const introScreen = modal ? modal.querySelector('.bould-widget__screen--intro') : null;
+    const introSteps = introScreen ? Array.from(introScreen.querySelectorAll('.bould-widget__intro-step')) : [];
+    const introActions = introScreen ? introScreen.querySelector('.bould-widget__actions--intro') : null;
+    if (container && container.classList && !container.classList.contains('bould-widget--enhanced')) {
+      container.classList.add('bould-widget--enhanced');
+    }
     const widgetIdRaw = container.getAttribute('data-block-id') || '';
     const widgetViewerId = widgetIdRaw || Math.random().toString(36).slice(2, 8);
     const imageViewer = createImageViewer(widgetViewerId);
@@ -29,7 +36,14 @@
       loadingFeedbackEl.hidden = true;
       loadingFeedbackEl.classList.remove('is-visible');
     }
+    if (loadingGeneratingEl) {
+      loadingGeneratingEl.hidden = true;
+      loadingGeneratingEl.classList.remove('is-active');
+      loadingGeneratingEl.setAttribute('aria-hidden', 'true');
+    }
     let activeFeedbackCycle = null;
+    let introAnimationTimers = [];
+    let introHeightLock = { width: 0, height: 0 };
     let statusPromise = null;
     let defaultFeedbackController = null;
     let defaultFeedbackPromise = null;
@@ -176,6 +190,266 @@
       const narrow = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 820px)').matches;
       return matchesUa || (coarse && narrow);
     }
+
+    function clearIntroAnimation(){
+      if (introAnimationTimers.length){
+        introAnimationTimers.forEach(function(timer){
+          clearTimeout(timer);
+        });
+        introAnimationTimers = [];
+      }
+      if (introSteps.length){
+        introSteps.forEach(function(step){
+          step.classList.remove('is-visible', 'is-highlight');
+          step.setAttribute('aria-hidden', 'true');
+          step.style.opacity = '0';
+          step.style.visibility = 'hidden';
+          step.style.transitionDelay = '';
+          step.classList.remove('is-active-intro');
+          setIntroProgress(step, 0);
+        });
+      }
+      if (introActions){
+        introActions.classList.remove('is-visible');
+        introActions.hidden = true;
+        introActions.setAttribute('hidden', '');
+        introActions.setAttribute('aria-hidden', 'true');
+      }
+      if (introScreen){
+        unlockIntroScreenHeight();
+        introScreen.classList.remove('is-animating');
+      }
+      introHeightLock = { width: 0, height: 0 };
+    }
+
+    function queueIntroTimeout(callback, delay){
+      const timerId = setTimeout(function(){
+        callback();
+      }, Math.max(0, delay));
+      introAnimationTimers.push(timerId);
+      return timerId;
+    }
+
+    function setIntroProgress(step, value){
+      if (!step) return;
+      const numeric = typeof value === 'number' ? value : parseFloat(value);
+      const clamped = Math.max(0, Math.min(1, Number.isFinite(numeric) ? numeric : 0));
+      step.style.setProperty('--intro-progress', clamped.toFixed(3));
+    }
+
+    function updateIntroProgress(activeIndex){
+      if (!introSteps.length){
+        return;
+      }
+      const active = typeof activeIndex === 'number' ? activeIndex : -1;
+      introSteps.forEach(function(step, index){
+        let target = 0;
+        if (active >= 0){
+          if (index === active){
+            target = 1;
+            step.classList.add('is-active-intro');
+          } else if (index < active){
+            const distance = active - index;
+            if (distance === 1){
+              target = 0.64;
+            } else if (distance === 2){
+              target = 0.44;
+            } else {
+              target = 0.3;
+            }
+            step.classList.remove('is-active-intro');
+          } else {
+            target = 0;
+            step.classList.remove('is-active-intro');
+          }
+        } else {
+          step.classList.remove('is-active-intro');
+        }
+        setIntroProgress(step, target);
+      });
+    }
+
+    function measureIntroScreenNaturalHeight(){
+      if (!introScreen){
+        return 0;
+      }
+      const referenceRect = introScreen.getBoundingClientRect();
+      const clone = introScreen.cloneNode(true);
+      clone.style.position = 'absolute';
+      clone.style.top = '-9999px';
+      clone.style.left = '0';
+      clone.style.visibility = 'hidden';
+      clone.style.pointerEvents = 'none';
+      clone.style.opacity = '0';
+      clone.style.transform = 'none';
+      clone.style.height = 'auto';
+      clone.style.minHeight = '0';
+      if (referenceRect && referenceRect.width){
+        clone.style.width = Math.round(referenceRect.width) + 'px';
+      }
+      clone.classList.remove('is-animating');
+      clone.querySelectorAll('[hidden]').forEach(function(el){
+        el.hidden = false;
+        el.removeAttribute('hidden');
+      });
+      clone.querySelectorAll('.bould-widget__intro-step').forEach(function(step){
+        step.classList.add('is-visible', 'is-active-intro');
+        step.classList.remove('is-highlight');
+        step.removeAttribute('style');
+        step.style.setProperty('--intro-progress', '1');
+      });
+      const cloneActions = clone.querySelector('.bould-widget__actions--intro');
+      if (cloneActions){
+        cloneActions.hidden = false;
+        cloneActions.removeAttribute('hidden');
+        cloneActions.classList.add('is-visible');
+        cloneActions.removeAttribute('style');
+        cloneActions.setAttribute('aria-hidden', 'false');
+      }
+      const parent = introScreen.parentNode;
+      if (!parent){
+        return 0;
+      }
+      parent.insertBefore(clone, introScreen);
+      const measurement = clone.getBoundingClientRect();
+      parent.removeChild(clone);
+      return measurement && measurement.height ? Math.ceil(measurement.height) : 0;
+    }
+
+    function lockIntroScreenHeight(force){
+      if (!introScreen){
+        return;
+      }
+      const rect = introScreen.getBoundingClientRect();
+      const width = rect && rect.width ? Math.round(rect.width) : 0;
+      if (width <= 0){
+        if (introHeightLock.height){
+          introScreen.style.minHeight = introHeightLock.height + 'px';
+          introScreen.style.height = introHeightLock.height + 'px';
+        }
+        return;
+      }
+      if (!force && introHeightLock.height && introHeightLock.width === width){
+        introScreen.style.minHeight = introHeightLock.height + 'px';
+        introScreen.style.height = introHeightLock.height + 'px';
+        return;
+      }
+      const measured = measureIntroScreenNaturalHeight();
+      if (measured > 0){
+        introHeightLock = { width: width, height: measured };
+        introScreen.style.minHeight = measured + 'px';
+        introScreen.style.height = measured + 'px';
+        introScreen.setAttribute('data-height-lock', 'true');
+      }
+    }
+
+    function unlockIntroScreenHeight(){
+      if (!introScreen){
+        return;
+      }
+      introScreen.style.height = '';
+      introScreen.style.minHeight = '';
+      introScreen.removeAttribute('data-height-lock');
+    }
+
+    if (typeof ResizeObserver === 'function' && introScreen){
+      const introResizeObserver = new ResizeObserver(function(entries){
+        if (!introScreen || introScreen.hidden){
+          return;
+        }
+        lockIntroScreenHeight(false);
+      });
+      introResizeObserver.observe(introScreen);
+    }
+
+    function runIntroAnimation(){
+      if (!introScreen){
+        return;
+      }
+      clearIntroAnimation();
+      lockIntroScreenHeight(false);
+      updateIntroProgress(-1);
+      if (!introSteps.length){
+        if (introActions){
+          introActions.hidden = false;
+          introActions.removeAttribute('hidden');
+          introActions.classList.add('is-visible');
+          introActions.setAttribute('aria-hidden', 'false');
+        }
+        unlockIntroScreenHeight();
+        return;
+      }
+      const prefersReducedMotion =
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReducedMotion){
+        lockIntroScreenHeight(true);
+        introSteps.forEach(function(step){
+          step.setAttribute('aria-hidden', 'false');
+          step.style.visibility = '';
+          step.style.opacity = '';
+          step.classList.add('is-visible');
+          setIntroProgress(step, 1);
+          step.classList.add('is-active-intro');
+        });
+        if (introActions){
+          introActions.hidden = false;
+          introActions.removeAttribute('hidden');
+          introActions.classList.add('is-visible');
+          introActions.setAttribute('aria-hidden', 'false');
+        }
+        if (introScreen){
+          introScreen.classList.remove('is-animating');
+          requestAnimationFrame(function(){
+            unlockIntroScreenHeight();
+          });
+        } else {
+          unlockIntroScreenHeight();
+        }
+        return;
+      }
+      introScreen.classList.add('is-animating');
+      const baseDelay = 220;
+      const stepRevealGap = 1000;
+      const revealDuration = 620;
+      const finalSettleDelay = 360;
+      lockIntroScreenHeight(false);
+      let delay = baseDelay;
+      introSteps.forEach(function(step, index){
+        queueIntroTimeout(function(){
+          requestAnimationFrame(function(){
+            step.style.transitionDelay = '0ms';
+            step.setAttribute('aria-hidden', 'false');
+            step.style.visibility = '';
+            step.style.opacity = '';
+            step.classList.add('is-visible');
+            updateIntroProgress(index);
+          });
+        }, delay);
+
+        if (index === introSteps.length - 1){
+          queueIntroTimeout(function(){
+            if (introActions){
+              introActions.hidden = false;
+              introActions.removeAttribute('hidden');
+              introActions.classList.add('is-visible');
+              introActions.setAttribute('aria-hidden', 'false');
+            }
+            if (introScreen){
+              introScreen.classList.remove('is-animating');
+              requestAnimationFrame(function(){
+                unlockIntroScreenHeight();
+              });
+            } else {
+              unlockIntroScreenHeight();
+            }
+          }, delay + revealDuration + finalSettleDelay);
+        }
+        delay += stepRevealGap;
+      });
+    }
+
+    clearIntroAnimation();
 
     function createImageViewer(widgetId){
       if (typeof document === 'undefined' || !document.body) {
@@ -337,6 +611,22 @@
       activeFeedbackCycle = null;
     }
 
+    function setLoadingGeneratingActive(active){
+      if (!loadingGeneratingEl) {
+        return;
+      }
+      if (active){
+        loadingGeneratingEl.hidden = false;
+        loadingGeneratingEl.removeAttribute('hidden');
+        loadingGeneratingEl.classList.add('is-active');
+        loadingGeneratingEl.setAttribute('aria-hidden', 'false');
+      } else {
+        loadingGeneratingEl.classList.remove('is-active');
+        loadingGeneratingEl.setAttribute('aria-hidden', 'true');
+        loadingGeneratingEl.hidden = true;
+      }
+    }
+
     function resetLoadingMessage(){
       stopFeedbackCycle(true);
       if (loadingStatusEl) {
@@ -351,6 +641,7 @@
         loadingFeedbackEl.classList.remove('is-visible');
         loadingFeedbackEl.textContent = '';
       }
+      setLoadingGeneratingActive(true);
       defaultFeedbackController = null;
       defaultFeedbackPromise = null;
       tailoredFeedbackController = null;
@@ -1029,6 +1320,12 @@
         });
       }
       updateHeaderForScreen(name);
+      if (name === 'intro'){
+        runIntroAnimation();
+      } else {
+        clearIntroAnimation();
+      }
+      setLoadingGeneratingActive(name === 'loading');
     }
 
     function getProductId(){
@@ -1149,6 +1446,7 @@
       closeImageViewer(true);
       stopFeedbackCycle();
       resetLoadingMessage();
+      clearIntroAnimation();
     }
 
     openBtn && openBtn.addEventListener('click', open);

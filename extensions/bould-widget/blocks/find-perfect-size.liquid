@@ -27,7 +27,7 @@
 
 {% assign extra_button_classes = block.settings.button_classes | strip %}
 
-<div class="bould-widget-root" data-bould-widget data-block-id="{{ block.id }}" data-api-base="{{ block.settings.api_base }}" data-product-id="{{ product.admin_graphql_api_id }}" {% if featured_image != blank %}data-product-image="{{ featured_image | image_url: width: 2048 }}"{% endif %}{% if widget_style != blank %} style="{{ widget_style }}"{% endif %}>
+<div class="bould-widget-root bould-widget--enhanced" data-bould-widget data-block-id="{{ block.id }}" data-api-base="{{ block.settings.api_base }}" data-product-id="{{ product.admin_graphql_api_id }}" {% if featured_image != blank %}data-product-image="{{ featured_image | image_url: width: 2048 }}"{% endif %}{% if widget_style != blank %} style="{{ widget_style }}"{% endif %}>
   <button type="button" class="bould-widget__open bould-btn{% if extra_button_classes != blank %} {{ extra_button_classes }}{% endif %}">{{ block.settings.button_label }}</button>
   <div class="bould-widget__upgrade" hidden></div>
 
@@ -44,12 +44,12 @@
       <div class="bould-widget__body">
         <div class="bould-widget__screen bould-widget__screen--intro" data-screen="intro">
           <h3>How it works</h3>
-          <ol>
-            <li>Upload a T-pose photo</li>
-            <li>Enter your height</li>
-            <li>Get your size</li>
+          <ol class="bould-widget__intro-steps">
+            <li class="bould-widget__intro-step" data-intro-step="1">Upload a T-pose photo</li>
+            <li class="bould-widget__intro-step" data-intro-step="2">Enter your height</li>
+            <li class="bould-widget__intro-step" data-intro-step="3">Get your size</li>
           </ol>
-          <div class="bould-widget__actions">
+          <div class="bould-widget__actions bould-widget__actions--intro" data-intro-actions hidden>
             <button type="button" data-action="close" class="bould-btn bould-btn--subtle">Go back</button>
             <button type="button" data-action="continue" class="bould-btn">Continue</button>
           </div>
@@ -83,6 +83,7 @@
         <div class="bould-widget__screen bould-widget__screen--loading" data-screen="loading" hidden>
           <div class="bould-widget__loading-state" data-loading-state>
             <p class="bould-widget__loading-text">Analyzing your image and creating a try‑on…</p>
+            <p class="bould-widget__loading-generating" data-loading-generating hidden aria-hidden="true">Generating</p>
           </div>
           <p class="bould-widget__loading-feedback bould-widget__fade-text" data-loading-feedback hidden></p>
         </div>
