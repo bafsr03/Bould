@@ -25,9 +25,29 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     // Mock result
     const tryOnImageUrl = "https://placehold.co/600x800/png?text=Try-on";
-    const recommendedSize = "M";
 
-    return json({ tryOnImageUrl, recommendedSize });
+    const heightNum = parseFloat(height);
+    let recommendedSize = "M";
+    let confidence = 0.8;
+    let matchDetails = {};
+
+    if (!isNaN(heightNum)) {
+      const { simulateBodyMeasurements, fetchGarmentScale, recommendSize } = await import("../services/recommendation_engine");
+
+      // Simulate getting body measurements from the image (mocked)
+      const body = await simulateBodyMeasurements(userImage as File, heightNum, 'cm');
+
+      // Simulate getting garment scale
+      const scale = await fetchGarmentScale("mock-product-id");
+
+      // Calculate recommendation
+      const result = recommendSize(body, scale);
+      recommendedSize = result.recommendedSize;
+      confidence = result.confidence;
+      matchDetails = result.matchDetails || {};
+    }
+
+    return json({ tryOnImageUrl, recommendedSize, confidence, matchDetails });
   } catch (error: any) {
     return json({ error: error?.message || "Server error" }, { status: 500 });
   }

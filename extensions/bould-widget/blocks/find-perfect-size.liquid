@@ -44,43 +44,68 @@
       <div class="bould-widget__body">
         <div class="bould-widget__screen bould-widget__screen--intro" data-screen="intro">
           <h3>How it works</h3>
-          <ol class="bould-widget__intro-steps">
-            <li class="bould-widget__intro-step" data-intro-step="1">Upload a T-pose photo</li>
-            <li class="bould-widget__intro-step" data-intro-step="2">Enter your height</li>
-            <li class="bould-widget__intro-step" data-intro-step="3">Get your size</li>
-          </ol>
+          <div class="bould-widget__intro-grid">
+            <div class="bould-widget__intro-step" data-intro-step="1">
+              <div class="bould-widget__step-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              <span class="bould-widget__step-text">Upload a T-pose photo</span>
+            </div>
+            <div class="bould-widget__intro-step" data-intro-step="2">
+              <div class="bould-widget__step-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <span class="bould-widget__step-text">Enter your height</span>
+            </div>
+            <div class="bould-widget__intro-step" data-intro-step="3">
+              <div class="bould-widget__step-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.4a2 2 0 0 0-2-2h-12.76a2 2 0 0 0-2 2l-.38 2.6a2 2 0 0 0 1.98 2.2h13.52a2 2 0 0 0 1.98-2.2z"/><path d="M16 14l-4 4-4-4"/></svg>
+              </div>
+              <span class="bould-widget__step-text">Get your size</span>
+            </div>
+          </div>
           <div class="bould-widget__actions bould-widget__actions--intro" data-intro-actions hidden>
-            <button type="button" data-action="close" class="bould-btn bould-btn--subtle">Go back</button>
-            <button type="button" data-action="continue" class="bould-btn">Continue</button>
+            <button type="button" data-action="continue" class="bould-btn bould-btn--primary bould-btn--full">Continue</button>
           </div>
         </div>
 
         <div class="bould-widget__screen bould-widget__screen--form" data-screen="form" hidden>
           <p class="bould-widget__section-lede">Upload a T‑pose photo and enter your height. Choose centimeters or inches.</p>
           <form class="bould-widget__form">
-            <label class="bould-widget__field">
+            <div class="bould-widget__field">
               <span class="bould-widget__label">Photo</span>
-              <input type="file" accept="image/*" name="user_image" required />
-            </label>
-            <div class="bould-widget__field bould-widget__field--inline">
-              <label>
-                <span class="bould-widget__label">Height</span>
-                <input type="number" name="height" placeholder="Height" min="80" max="250" inputmode="decimal" required />
-              </label>
-              <label>
-                <span class="bould-widget__label">Unit</span>
-                <select name="body_unit" class="bould-widget__unit-select">
-                  <option value="cm" selected>cm</option>
-                  <option value="inch">inch</option>
-                </select>
+              <label class="bould-widget__file-upload">
+                <input type="file" accept="image/*" name="user_image" required />
+                <div class="bould-widget__file-upload-content">
+                  <div class="bould-widget__upload-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  </div>
+                  <span class="bould-widget__upload-text">Tap to upload T-pose</span>
+                </div>
               </label>
             </div>
-            <button type="submit" class="bould-btn">Submit</button>
-            <p class="bould-widget__privacy">We keep your data private.</p>
+            <div class="bould-widget__field">
+              <span class="bould-widget__label">Height</span>
+              <div class="bould-widget__input-group">
+                <input type="number" name="height" placeholder="0" min="80" max="250" inputmode="decimal" required class="bould-widget__input--height" />
+                <div class="bould-widget__unit-toggle">
+                  <select name="body_unit" class="bould-widget__unit-select">
+                    <option value="cm" selected>cm</option>
+                    <option value="inch">in</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <button type="submit" class="bould-btn bould-btn--primary bould-btn--full">Find my size</button>
+            <p class="bould-widget__privacy">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;display:inline-block;vertical-align:middle;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              Your photo is private and deleted after processing.
+            </p>
           </form>
         </div>
 
         <div class="bould-widget__screen bould-widget__screen--loading" data-screen="loading" hidden>
+          <h2 class="bould-widget__title" id="bould-widget-title-{{ block.id }}">Finding your best fit</h2>
           <div class="bould-widget__loading-state" data-loading-state>
             <p class="bould-widget__loading-text">Analyzing your image and creating a try‑on…</p>
             <p class="bould-widget__loading-generating" data-loading-generating hidden aria-hidden="true">Generating</p>

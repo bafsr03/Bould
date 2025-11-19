@@ -1,6 +1,6 @@
-(function(){
+(function () {
   // Bind per-block instance
-  document.querySelectorAll('[data-bould-widget]').forEach(function(container){
+  document.querySelectorAll('[data-bould-widget]').forEach(function (container) {
     const openBtn = container.querySelector('.bould-widget__open');
     const modal = container.querySelector('.bould-widget');
     const closeBtn = container.querySelector('.bould-widget__close');
@@ -52,9 +52,9 @@
     const errorActionButton = modal ? modal.querySelector('.bould-widget__screen--error [data-action]') : null;
     const errorActionDefaults = errorActionButton
       ? {
-          label: errorActionButton.textContent || 'Try again',
-          action: errorActionButton.getAttribute('data-action') || 'back-to-form',
-        }
+        label: errorActionButton.textContent || 'Try again',
+        action: errorActionButton.getAttribute('data-action') || 'back-to-form',
+      }
       : { label: 'Try again', action: 'back-to-form' };
     const DEFAULT_ERROR_HEADING = 'Something went wrong';
 
@@ -78,9 +78,9 @@
         describe: true
       },
       loading: {
-        title: 'Finding your best fit',
+        title: '',
         subtitle: '',
-        compact: false,
+        compact: true,
         describe: false
       },
       form: {
@@ -99,7 +99,7 @@
 
     updateHeaderForScreen('intro');
 
-    function updateHeaderForScreen(name){
+    function updateHeaderForScreen(name) {
       const config = HEADER_CONFIG[name] || HEADER_CONFIG.form || {};
       const eyebrowText = typeof config.eyebrow === 'string' ? config.eyebrow : '';
       const titleText = typeof config.title === 'string' ? config.title : '';
@@ -157,7 +157,7 @@
       }
     }
 
-    function escapeHtml(value){
+    function escapeHtml(value) {
       return String(value ?? '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -166,24 +166,24 @@
         .replace(/'/g, '&#039;');
     }
 
-    function formatMessage(value){
+    function formatMessage(value) {
       return escapeHtml(value).replace(/\r?\n/g, '<br />');
     }
 
-    function isDesignMode(){
-      try{
+    function isDesignMode() {
+      try {
         return !!(window.Shopify && window.Shopify.designMode);
-      }catch(e){
+      } catch (e) {
         return false;
       }
     }
 
-    function isPhoneDevice(){
-      try{
-        if (navigator?.userAgentData && typeof navigator.userAgentData.mobile === 'boolean'){
+    function isPhoneDevice() {
+      try {
+        if (navigator?.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
           return navigator.userAgentData.mobile;
         }
-      }catch(e){}
+      } catch (e) { }
       const ua = (navigator.userAgent || navigator.vendor || (window.opera && window.opera.toString && window.opera.toString()) || '').toLowerCase();
       const matchesUa = /(android|iphone|ipad|ipod|windows phone|blackberry|bb10|mobile)/i.test(ua);
       const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
@@ -191,15 +191,15 @@
       return matchesUa || (coarse && narrow);
     }
 
-    function clearIntroAnimation(){
-      if (introAnimationTimers.length){
-        introAnimationTimers.forEach(function(timer){
+    function clearIntroAnimation() {
+      if (introAnimationTimers.length) {
+        introAnimationTimers.forEach(function (timer) {
           clearTimeout(timer);
         });
         introAnimationTimers = [];
       }
-      if (introSteps.length){
-        introSteps.forEach(function(step){
+      if (introSteps.length) {
+        introSteps.forEach(function (step) {
           step.classList.remove('is-visible', 'is-highlight');
           step.setAttribute('aria-hidden', 'true');
           step.style.opacity = '0';
@@ -209,50 +209,50 @@
           setIntroProgress(step, 0);
         });
       }
-      if (introActions){
+      if (introActions) {
         introActions.classList.remove('is-visible');
         introActions.hidden = true;
         introActions.setAttribute('hidden', '');
         introActions.setAttribute('aria-hidden', 'true');
       }
-      if (introScreen){
+      if (introScreen) {
         unlockIntroScreenHeight();
         introScreen.classList.remove('is-animating');
       }
       introHeightLock = { width: 0, height: 0 };
     }
 
-    function queueIntroTimeout(callback, delay){
-      const timerId = setTimeout(function(){
+    function queueIntroTimeout(callback, delay) {
+      const timerId = setTimeout(function () {
         callback();
       }, Math.max(0, delay));
       introAnimationTimers.push(timerId);
       return timerId;
     }
 
-    function setIntroProgress(step, value){
+    function setIntroProgress(step, value) {
       if (!step) return;
       const numeric = typeof value === 'number' ? value : parseFloat(value);
       const clamped = Math.max(0, Math.min(1, Number.isFinite(numeric) ? numeric : 0));
       step.style.setProperty('--intro-progress', clamped.toFixed(3));
     }
 
-    function updateIntroProgress(activeIndex){
-      if (!introSteps.length){
+    function updateIntroProgress(activeIndex) {
+      if (!introSteps.length) {
         return;
       }
       const active = typeof activeIndex === 'number' ? activeIndex : -1;
-      introSteps.forEach(function(step, index){
+      introSteps.forEach(function (step, index) {
         let target = 0;
-        if (active >= 0){
-          if (index === active){
+        if (active >= 0) {
+          if (index === active) {
             target = 1;
             step.classList.add('is-active-intro');
-          } else if (index < active){
+          } else if (index < active) {
             const distance = active - index;
-            if (distance === 1){
+            if (distance === 1) {
               target = 0.64;
-            } else if (distance === 2){
+            } else if (distance === 2) {
               target = 0.44;
             } else {
               target = 0.3;
@@ -269,8 +269,8 @@
       });
     }
 
-    function measureIntroScreenNaturalHeight(){
-      if (!introScreen){
+    function measureIntroScreenNaturalHeight() {
+      if (!introScreen) {
         return 0;
       }
       const referenceRect = introScreen.getBoundingClientRect();
@@ -284,22 +284,22 @@
       clone.style.transform = 'none';
       clone.style.height = 'auto';
       clone.style.minHeight = '0';
-      if (referenceRect && referenceRect.width){
+      if (referenceRect && referenceRect.width) {
         clone.style.width = Math.round(referenceRect.width) + 'px';
       }
       clone.classList.remove('is-animating');
-      clone.querySelectorAll('[hidden]').forEach(function(el){
+      clone.querySelectorAll('[hidden]').forEach(function (el) {
         el.hidden = false;
         el.removeAttribute('hidden');
       });
-      clone.querySelectorAll('.bould-widget__intro-step').forEach(function(step){
+      clone.querySelectorAll('.bould-widget__intro-step').forEach(function (step) {
         step.classList.add('is-visible', 'is-active-intro');
         step.classList.remove('is-highlight');
         step.removeAttribute('style');
         step.style.setProperty('--intro-progress', '1');
       });
       const cloneActions = clone.querySelector('.bould-widget__actions--intro');
-      if (cloneActions){
+      if (cloneActions) {
         cloneActions.hidden = false;
         cloneActions.removeAttribute('hidden');
         cloneActions.classList.add('is-visible');
@@ -307,7 +307,7 @@
         cloneActions.setAttribute('aria-hidden', 'false');
       }
       const parent = introScreen.parentNode;
-      if (!parent){
+      if (!parent) {
         return 0;
       }
       parent.insertBefore(clone, introScreen);
@@ -316,26 +316,26 @@
       return measurement && measurement.height ? Math.ceil(measurement.height) : 0;
     }
 
-    function lockIntroScreenHeight(force){
-      if (!introScreen){
+    function lockIntroScreenHeight(force) {
+      if (!introScreen) {
         return;
       }
       const rect = introScreen.getBoundingClientRect();
       const width = rect && rect.width ? Math.round(rect.width) : 0;
-      if (width <= 0){
-        if (introHeightLock.height){
+      if (width <= 0) {
+        if (introHeightLock.height) {
           introScreen.style.minHeight = introHeightLock.height + 'px';
           introScreen.style.height = introHeightLock.height + 'px';
         }
         return;
       }
-      if (!force && introHeightLock.height && introHeightLock.width === width){
+      if (!force && introHeightLock.height && introHeightLock.width === width) {
         introScreen.style.minHeight = introHeightLock.height + 'px';
         introScreen.style.height = introHeightLock.height + 'px';
         return;
       }
       const measured = measureIntroScreenNaturalHeight();
-      if (measured > 0){
+      if (measured > 0) {
         introHeightLock = { width: width, height: measured };
         introScreen.style.minHeight = measured + 'px';
         introScreen.style.height = measured + 'px';
@@ -343,8 +343,8 @@
       }
     }
 
-    function unlockIntroScreenHeight(){
-      if (!introScreen){
+    function unlockIntroScreenHeight() {
+      if (!introScreen) {
         return;
       }
       introScreen.style.height = '';
@@ -352,9 +352,9 @@
       introScreen.removeAttribute('data-height-lock');
     }
 
-    if (typeof ResizeObserver === 'function' && introScreen){
-      const introResizeObserver = new ResizeObserver(function(entries){
-        if (!introScreen || introScreen.hidden){
+    if (typeof ResizeObserver === 'function' && introScreen) {
+      const introResizeObserver = new ResizeObserver(function (entries) {
+        if (!introScreen || introScreen.hidden) {
           return;
         }
         lockIntroScreenHeight(false);
@@ -362,15 +362,15 @@
       introResizeObserver.observe(introScreen);
     }
 
-    function runIntroAnimation(){
-      if (!introScreen){
+    function runIntroAnimation() {
+      if (!introScreen) {
         return;
       }
       clearIntroAnimation();
       lockIntroScreenHeight(false);
       updateIntroProgress(-1);
-      if (!introSteps.length){
-        if (introActions){
+      if (!introSteps.length) {
+        if (introActions) {
           introActions.hidden = false;
           introActions.removeAttribute('hidden');
           introActions.classList.add('is-visible');
@@ -382,9 +382,9 @@
       const prefersReducedMotion =
         typeof window.matchMedia === 'function' &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (prefersReducedMotion){
+      if (prefersReducedMotion) {
         lockIntroScreenHeight(true);
-        introSteps.forEach(function(step){
+        introSteps.forEach(function (step) {
           step.setAttribute('aria-hidden', 'false');
           step.style.visibility = '';
           step.style.opacity = '';
@@ -392,15 +392,15 @@
           setIntroProgress(step, 1);
           step.classList.add('is-active-intro');
         });
-        if (introActions){
+        if (introActions) {
           introActions.hidden = false;
           introActions.removeAttribute('hidden');
           introActions.classList.add('is-visible');
           introActions.setAttribute('aria-hidden', 'false');
         }
-        if (introScreen){
+        if (introScreen) {
           introScreen.classList.remove('is-animating');
-          requestAnimationFrame(function(){
+          requestAnimationFrame(function () {
             unlockIntroScreenHeight();
           });
         } else {
@@ -415,9 +415,9 @@
       const finalSettleDelay = 360;
       lockIntroScreenHeight(false);
       let delay = baseDelay;
-      introSteps.forEach(function(step, index){
-        queueIntroTimeout(function(){
-          requestAnimationFrame(function(){
+      introSteps.forEach(function (step, index) {
+        queueIntroTimeout(function () {
+          requestAnimationFrame(function () {
             step.style.transitionDelay = '0ms';
             step.setAttribute('aria-hidden', 'false');
             step.style.visibility = '';
@@ -427,17 +427,17 @@
           });
         }, delay);
 
-        if (index === introSteps.length - 1){
-          queueIntroTimeout(function(){
-            if (introActions){
+        if (index === introSteps.length - 1) {
+          queueIntroTimeout(function () {
+            if (introActions) {
               introActions.hidden = false;
               introActions.removeAttribute('hidden');
               introActions.classList.add('is-visible');
               introActions.setAttribute('aria-hidden', 'false');
             }
-            if (introScreen){
+            if (introScreen) {
               introScreen.classList.remove('is-animating');
-              requestAnimationFrame(function(){
+              requestAnimationFrame(function () {
                 unlockIntroScreenHeight();
               });
             } else {
@@ -451,15 +451,15 @@
 
     clearIntroAnimation();
 
-    function createImageViewer(widgetId){
+    function createImageViewer(widgetId) {
       if (typeof document === 'undefined' || !document.body) {
         return null;
       }
       if (widgetId) {
         const candidates = document.querySelectorAll('.bould-widget__image-viewer');
-        for (let i = 0; i < candidates.length; i += 1){
+        for (let i = 0; i < candidates.length; i += 1) {
           const candidate = candidates[i];
-          if (candidate && candidate.getAttribute('data-widget-id') === widgetId){
+          if (candidate && candidate.getAttribute('data-widget-id') === widgetId) {
             return candidate;
           }
         }
@@ -496,7 +496,7 @@
       return viewer;
     }
 
-    function openImageViewer(src, altText, originEl){
+    function openImageViewer(src, altText, originEl) {
       if (!imageViewer || !imageViewerImage || !src) {
         return;
       }
@@ -512,22 +512,22 @@
       }
       imageViewer.hidden = false;
       imageViewer.setAttribute('aria-hidden', 'false');
-      requestAnimationFrame(function(){
+      requestAnimationFrame(function () {
         imageViewer.classList.add('is-visible');
       });
       document.addEventListener('keydown', handleImageViewerKeydown);
       if (imageViewerCloseBtn && typeof imageViewerCloseBtn.focus === 'function') {
-        setTimeout(function(){
-          try{
+        setTimeout(function () {
+          try {
             imageViewerCloseBtn.focus({ preventScroll: true });
-          }catch(e){
+          } catch (e) {
             imageViewerCloseBtn.focus();
           }
         }, 50);
       }
     }
 
-    function closeImageViewer(forceImmediate){
+    function closeImageViewer(forceImmediate) {
       if (!imageViewer || imageViewer.hidden) {
         return;
       }
@@ -537,7 +537,7 @@
       }
       imageViewer.classList.remove('is-visible');
       document.removeEventListener('keydown', handleImageViewerKeydown);
-      const finalize = function(){
+      const finalize = function () {
         imageViewerHideTimer = null;
         if (imageViewerImage) {
           imageViewerImage.removeAttribute('src');
@@ -545,9 +545,9 @@
         imageViewer.setAttribute('aria-hidden', 'true');
         imageViewer.hidden = true;
         if (imageViewerReturnFocusEl && typeof imageViewerReturnFocusEl.focus === 'function') {
-          try{
+          try {
             imageViewerReturnFocusEl.focus({ preventScroll: true });
-          }catch(e){
+          } catch (e) {
             imageViewerReturnFocusEl.focus();
           }
         }
@@ -560,7 +560,7 @@
       }
     }
 
-    function handleImageViewerKeydown(event){
+    function handleImageViewerKeydown(event) {
       if (!event) return;
       if (event.key === 'Escape' || event.key === 'Esc') {
         event.preventDefault();
@@ -568,7 +568,7 @@
       }
     }
 
-    function ensureStateNotice(){
+    function ensureStateNotice() {
       let notice = container.querySelector('.bould-widget__state');
       if (!notice) {
         notice = document.createElement('div');
@@ -583,7 +583,7 @@
       return notice;
     }
 
-    function showInlineNotice(message, tone){
+    function showInlineNotice(message, tone) {
       const notice = ensureStateNotice();
       notice.className = 'bould-widget__state';
       if (tone === 'warning') {
@@ -595,7 +595,7 @@
       notice.hidden = false;
     }
 
-    function clearInlineNotice(){
+    function clearInlineNotice() {
       const notice = container.querySelector('.bould-widget__state');
       if (notice) {
         notice.className = 'bould-widget__state';
@@ -604,18 +604,18 @@
       }
     }
 
-    function stopFeedbackCycle(forceHide){
+    function stopFeedbackCycle(forceHide) {
       if (activeFeedbackCycle && typeof activeFeedbackCycle.cancel === 'function') {
         activeFeedbackCycle.cancel(!!forceHide);
       }
       activeFeedbackCycle = null;
     }
 
-    function setLoadingGeneratingActive(active){
+    function setLoadingGeneratingActive(active) {
       if (!loadingGeneratingEl) {
         return;
       }
-      if (active){
+      if (active) {
         loadingGeneratingEl.hidden = false;
         loadingGeneratingEl.removeAttribute('hidden');
         loadingGeneratingEl.classList.add('is-active');
@@ -627,7 +627,7 @@
       }
     }
 
-    function resetLoadingMessage(){
+    function resetLoadingMessage() {
       stopFeedbackCycle(true);
       if (loadingStatusEl) {
         loadingStatusEl.hidden = false;
@@ -648,8 +648,8 @@
       tailoredFeedbackPromise = null;
     }
 
-    function resetResultStage(){
-      resultStageEls.forEach(function(el){
+    function resetResultStage() {
+      resultStageEls.forEach(function (el) {
         if (!el) return;
         el.classList.remove('is-visible');
       });
@@ -673,14 +673,14 @@
     }
 
     const FEEDBACK_VISIBLE_MS = 2600;
-    const FEEDBACK_FADE_MS = 420;
+    const FEEDBACK_FADE_MS = 600;
     const FEEDBACK_FINAL_SETTLE_MS = 220;
     const DEFAULT_LOADING_FEEDBACK = [
       "Sizing assistant is reviewing your fit details...",
       "Hang tight - preparing your personalized fit notes."
     ];
 
-    function splitIntoSentences(value){
+    function splitIntoSentences(value) {
       if (!value) return [];
       const matches = String(value)
         .replace(/\s+/g, ' ')
@@ -688,15 +688,15 @@
       if (!matches) {
         return [String(value).trim()];
       }
-      return matches.map(function(part){
+      return matches.map(function (part) {
         return part.trim();
       }).filter(Boolean);
     }
 
-    function formatMetricName(metric){
+    function formatMetricName(metric) {
       return String(metric || '')
         .split('_')
-        .map(function(part){
+        .map(function (part) {
           if (!part) return '';
           return part.charAt(0).toUpperCase() + part.slice(1);
         })
@@ -704,24 +704,24 @@
         .join(' ');
     }
 
-    function summarizeSlack(matchDetails, preferredUnit){
+    function summarizeSlack(matchDetails, preferredUnit) {
       if (!matchDetails || typeof matchDetails !== 'object') return '';
       const unitKey = preferredUnit === 'inch' ? 'slacks_in' : 'slacks_cm';
       const slackObj = matchDetails[unitKey];
       if (!slackObj || typeof slackObj !== 'object') return '';
       const entries = Object.entries(slackObj)
-        .map(function(entry){
+        .map(function (entry) {
           const metric = entry[0];
           const rawValue = Number(entry[1]);
           if (!metric || Number.isNaN(rawValue)) return null;
           return [metric, rawValue];
         })
         .filter(Boolean)
-        .sort(function(a, b){
+        .sort(function (a, b) {
           return Math.abs(b[1]) - Math.abs(a[1]);
         });
       if (!entries.length) return '';
-      const topEntries = entries.slice(0, 3).map(function(entry){
+      const topEntries = entries.slice(0, 3).map(function (entry) {
         const metric = formatMetricName(entry[0]);
         const value = entry[1];
         const formatted = (value > 0 ? '+' : '') + value.toFixed(1);
@@ -731,7 +731,7 @@
       return 'Slack (' + unitLabel + '): ' + topEntries.join(', ');
     }
 
-    function extractFeedbackMessages(data){
+    function extractFeedbackMessages(data) {
       if (!data || typeof data !== 'object') {
         return ["We're reviewing your fit details...", "Hang tight - we're rendering your try-on preview now."];
       }
@@ -751,7 +751,7 @@
         messages = [raw];
       }
       messages = messages
-        .map(function(msg){
+        .map(function (msg) {
           return String(msg || '').replace(/\s+/g, ' ').trim();
         })
         .filter(Boolean);
@@ -763,7 +763,7 @@
       }
       if (messages.length === 1) {
         const first = messages[0];
-        const newlineParts = first.split(/\n+/).map(function(part){
+        const newlineParts = first.split(/\n+/).map(function (part) {
           return part.replace(/\s+/g, ' ').trim();
         }).filter(Boolean);
         if (newlineParts.length >= 2) {
@@ -780,7 +780,7 @@
       }
       const seen = new Set();
       const deduped = [];
-      messages.forEach(function(msg){
+      messages.forEach(function (msg) {
         if (!seen.has(msg)) {
           seen.add(msg);
           deduped.push(msg);
@@ -795,19 +795,19 @@
       return deduped.slice(0, 3);
     }
 
-    function startLoadingFeedback(messages, options){
+    function startLoadingFeedback(messages, options) {
       const normalized = Array.isArray(messages)
         ? messages
-            .map(function(msg){
-              return typeof msg === 'string' ? msg.replace(/\s+/g, ' ').trim() : '';
-            })
-            .filter(Boolean)
+          .map(function (msg) {
+            return typeof msg === 'string' ? msg.replace(/\s+/g, ' ').trim() : '';
+          })
+          .filter(Boolean)
         : [];
       if (!loadingFeedbackEl || !normalized.length) {
         const fallbackMessage = normalized.length ? normalized[normalized.length - 1] : '';
         return {
           promise: Promise.resolve({ finalMessage: fallbackMessage || '', cancelled: false }),
-          cancel: function(){}
+          cancel: function () { }
         };
       }
 
@@ -818,8 +818,7 @@
           fadeMs: FEEDBACK_FADE_MS,
           finalHoldMs: FEEDBACK_FINAL_SETTLE_MS,
           initialDelay: 30,
-          hideStatus: true,
-          loopCount: null
+          hideStatus: true
         },
         options || {}
       );
@@ -833,20 +832,20 @@
 
       let resolved = false;
       let resolveRef = null;
-      const timers = [];
-      const maxLoops = typeof opts.loopCount === 'number' && opts.loopCount > 0 ? opts.loopCount : null;
-      let loopsCompleted = 0;
+      let timerId = null;
+      let currentIndex = 0;
 
-      function clearTimers(){
-        while (timers.length) {
-          clearTimeout(timers.pop());
+      function clearTimer() {
+        if (timerId) {
+          clearTimeout(timerId);
+          timerId = null;
         }
       }
 
-      function finish(cancelled, explicitMessage){
+      function finish(cancelled, explicitMessage) {
         if (resolved) return;
         resolved = true;
-        clearTimers();
+        clearTimer();
         const finalMessage =
           explicitMessage !== undefined && explicitMessage !== null && explicitMessage !== ''
             ? explicitMessage
@@ -856,80 +855,79 @@
         }
       }
 
-      function showMessage(index){
-        if (!normalized.length) {
-          finish(true, '');
-          return;
-        }
-        const safeIndex = index % normalized.length;
-        const message = normalized[safeIndex];
-        displayEl.textContent = message;
-        requestAnimationFrame(function(){
-          displayEl.classList.add('is-visible');
-        });
+      function nextStep() {
+        if (resolved) return;
 
-        const isLast = safeIndex === normalized.length - 1;
+        // 1. Fade out
+        displayEl.classList.remove('is-visible');
 
-        if (opts.loop) {
-          timers.push(
-            setTimeout(function(){
-              const nextIndex = (safeIndex + 1) % normalized.length;
-              const completesCycle = nextIndex === 0;
-              if (completesCycle) {
-                loopsCompleted += 1;
-                if (maxLoops && loopsCompleted >= maxLoops) {
+        // 2. Wait for fade out to complete
+        timerId = setTimeout(function () {
+          if (resolved) return;
+
+          // 3. Change text
+          const message = normalized[currentIndex];
+          displayEl.textContent = message;
+
+          // 4. Fade in
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              if (resolved) return;
+              displayEl.classList.add('is-visible');
+
+              // 5. Wait for hold time
+              timerId = setTimeout(function () {
+                if (resolved) return;
+
+                // Prepare next index
+                const isLast = currentIndex === normalized.length - 1;
+
+                if (isLast && !opts.loop) {
                   finish(false, message);
-                  return;
+                } else {
+                  currentIndex = (currentIndex + 1) % normalized.length;
+                  nextStep();
                 }
-              }
-              displayEl.classList.remove('is-visible');
-              timers.push(
-                setTimeout(function(){
-                  showMessage(nextIndex);
-                }, opts.fadeMs)
-              );
-            }, opts.holdMs)
-          );
-          return;
-        }
-
-        if (!isLast) {
-          timers.push(
-            setTimeout(function(){
-              displayEl.classList.remove('is-visible');
-              timers.push(
-                setTimeout(function(){
-                  showMessage(safeIndex + 1);
-                }, opts.fadeMs)
-              );
-            }, opts.holdMs)
-          );
-        } else {
-          timers.push(
-            setTimeout(function(){
-              finish(false, message);
-            }, opts.finalHoldMs)
-          );
-        }
+              }, opts.holdMs);
+            });
+          });
+        }, opts.fadeMs);
       }
 
-      const sequencePromise = new Promise(function(resolve){
+      const sequencePromise = new Promise(function (resolve) {
         resolveRef = resolve;
-        timers.push(
-          setTimeout(function(){
-            showMessage(0);
-          }, Math.max(0, opts.initialDelay))
-        );
+        timerId = setTimeout(function () {
+          // Initial show
+          const message = normalized[currentIndex];
+          displayEl.textContent = message;
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              if (resolved) return;
+              displayEl.classList.add('is-visible');
+
+              timerId = setTimeout(function () {
+                if (resolved) return;
+                const isLast = currentIndex === normalized.length - 1;
+                if (isLast && !opts.loop) {
+                  finish(false, message);
+                } else {
+                  currentIndex = (currentIndex + 1) % normalized.length;
+                  nextStep();
+                }
+              }, opts.holdMs);
+            });
+          });
+        }, Math.max(0, opts.initialDelay));
       });
 
       const controller = {
-        promise: sequencePromise.then(function(result){
+        promise: sequencePromise.then(function (result) {
           if (activeFeedbackCycle === controller) {
             activeFeedbackCycle = null;
           }
           return result;
         }),
-        cancel: function(forceHide){
+        cancel: function (forceHide) {
           if (resolved) {
             if (forceHide) {
               displayEl.classList.remove('is-visible');
@@ -947,33 +945,33 @@
       return controller;
     }
 
-    function loadImageAsset(url){
+    function loadImageAsset(url) {
       if (!url) {
         return Promise.resolve({ url: '', loaded: false });
       }
-      return new Promise(function(resolve){
+      return new Promise(function (resolve) {
         const testImg = new Image();
         testImg.decoding = 'async';
-        testImg.onload = function(){
+        testImg.onload = function () {
           resolve({ url, loaded: true });
         };
-        testImg.onerror = function(){
+        testImg.onerror = function () {
           resolve({ url, loaded: false });
         };
         testImg.src = url;
       });
     }
 
-    function loadImageCandidates(urls){
+    function loadImageCandidates(urls) {
       const candidates = Array.isArray(urls) ? urls.filter(Boolean) : [];
       if (!candidates.length) {
         return Promise.resolve({ url: '', loaded: false });
       }
       let index = 0;
-      return new Promise(function(resolve){
-        function attempt(){
+      return new Promise(function (resolve) {
+        function attempt() {
           const currentUrl = candidates[index];
-          loadImageAsset(currentUrl).then(function(result){
+          loadImageAsset(currentUrl).then(function (result) {
             if (result.loaded) {
               resolve(result);
               return;
@@ -991,7 +989,7 @@
       });
     }
 
-    function prepareForRequest(){
+    function prepareForRequest() {
       stopFeedbackCycle(true);
       resetResultStage();
       defaultFeedbackController = null;
@@ -1007,9 +1005,8 @@
         loadingFeedbackEl.textContent = '';
         defaultFeedbackController = startLoadingFeedback(DEFAULT_LOADING_FEEDBACK, {
           loop: true,
-          loopCount: 2,
           holdMs: 2000,
-          fadeMs: 280,
+          fadeMs: 600,
           initialDelay: 0,
           hideStatus: false
         });
@@ -1020,7 +1017,7 @@
       showScreen('loading');
     }
 
-    function revealResultView(details){
+    function revealResultView(details) {
       if (!resultScreen) {
         return;
       }
@@ -1064,9 +1061,9 @@
         resultFeedbackEl.classList.remove('is-visible');
       }
       showScreen('result');
-      requestAnimationFrame(function(){
-        requestAnimationFrame(function(){
-          resultStageEls.forEach(function(el){
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          resultStageEls.forEach(function (el) {
             if (!el) return;
             if (el === resultImageEl && !details.imageUrl) {
               el.classList.remove('is-visible');
@@ -1082,7 +1079,7 @@
       resetLoadingMessage();
     }
 
-    function setOpenButtonDisabled(disabled, reason, title){
+    function setOpenButtonDisabled(disabled, reason, title) {
       if (!openBtn) return;
       if (!disabled && container.getAttribute('data-plan-blocked') === 'true') {
         return;
@@ -1110,7 +1107,7 @@
       }
     }
 
-    function renderDebugInfo(debugInfo){
+    function renderDebugInfo(debugInfo) {
       if (!debugInfo) return '';
       const lines = [];
       if (debugInfo.requestId) lines.push(`Request ID: ${escapeHtml(debugInfo.requestId)}`);
@@ -1126,11 +1123,11 @@
       return `<div class="bould-widget__debug-info"><strong>Debug Information:</strong><br>${lines.join('<br>')}</div>`;
     }
 
-    function getImmediateGate(designMode){
+    function getImmediateGate(designMode) {
       if (designMode) {
         return null;
       }
-      if (!isCustomerLoggedIn()){
+      if (!isCustomerLoggedIn()) {
         return {
           heading: 'Sign in required',
           message: 'Please log in to your store account to use this feature.',
@@ -1144,11 +1141,11 @@
       return null;
     }
 
-    function getPreflightGate(payload, designMode){
+    function getPreflightGate(payload, designMode) {
       if (!payload) {
         return null;
       }
-      if (payload.plan && payload.plan.blocked){
+      if (payload.plan && payload.plan.blocked) {
         return {
           heading: 'Upgrade required',
           message: payload.plan.message || UPGRADE_MESSAGE,
@@ -1164,15 +1161,15 @@
           }
         };
       }
-      if (!designMode && payload.isProcessed === false){
+      if (!designMode && payload.isProcessed === false) {
         const conversionStatus = payload.conversionStatus || 'not_ready';
         let heading = "Garment isn't ready yet";
         let message = 'This garment has not been processed yet.';
         let tone = 'warning';
-        if (conversionStatus === 'processing'){
+        if (conversionStatus === 'processing') {
           heading = 'Garment still processing';
           message = 'We are still processing this garment. Please wait a few minutes and try again.';
-        } else if (conversionStatus === 'failed'){
+        } else if (conversionStatus === 'failed') {
           heading = 'Garment conversion failed';
           message = 'This garment is not available for try-on.';
           tone = 'error';
@@ -1195,7 +1192,7 @@
       return null;
     }
 
-    function getEndpointBase(){
+    function getEndpointBase() {
       const base = container.getAttribute('data-api-base');
       if (base && base !== 'use_app_route' && base !== 'use_app_proxy') {
         return base;
@@ -1203,7 +1200,7 @@
       return '/apps/bould';
     }
 
-    function ensureUpgradeNotice(){
+    function ensureUpgradeNotice() {
       let notice = container.querySelector('.bould-widget__upgrade');
       if (!notice) {
         notice = document.createElement('div');
@@ -1215,7 +1212,7 @@
 
     const UPGRADE_MESSAGE = "Upgrade to continue using Bould.";
 
-    function applyPlanState(payload){
+    function applyPlanState(payload) {
       const plan = payload && payload.plan ? payload.plan : null;
       const blocked = !!(plan && plan.blocked);
       const existingNotice = container.querySelector('.bould-widget__upgrade');
@@ -1263,7 +1260,7 @@
       }
     }
 
-    async function fetchStatusPayload(){
+    async function fetchStatusPayload() {
       const productId = getProductId();
       const designMode = !!(window.Shopify && window.Shopify.designMode);
       if (!productId && !designMode) {
@@ -1293,7 +1290,7 @@
       return res.json();
     }
 
-    async function ensurePlanStatus(){
+    async function ensurePlanStatus() {
       if (statusPromise) {
         return statusPromise;
       }
@@ -1313,14 +1310,14 @@
       return statusPromise;
     }
 
-    function showScreen(name){
+    function showScreen(name) {
       if (modal) {
-        modal.querySelectorAll('.bould-widget__screen').forEach(function(s){
+        modal.querySelectorAll('.bould-widget__screen').forEach(function (s) {
           s.hidden = s.dataset.screen !== name;
         });
       }
       updateHeaderForScreen(name);
-      if (name === 'intro'){
+      if (name === 'intro') {
         runIntroAnimation();
       } else {
         clearIntroAnimation();
@@ -1328,22 +1325,22 @@
       setLoadingGeneratingActive(name === 'loading');
     }
 
-    function getProductId(){
+    function getProductId() {
       const fromAttr = container.getAttribute('data-product-id') || '';
       if (fromAttr) return fromAttr;
-      try{
+      try {
         const numId = (window.ShopifyAnalytics && window.ShopifyAnalytics.meta && window.ShopifyAnalytics.meta.product && window.ShopifyAnalytics.meta.product.id) || null;
         if (numId) return `gid://shopify/Product/${numId}`;
-      }catch(e){}
+      } catch (e) { }
       return '';
     }
 
-    function getProductImageUrl(){
+    function getProductImageUrl() {
       const fromAttr = container.getAttribute('data-product-image') || '';
       if (fromAttr) return fromAttr;
-      try{
+      try {
         const analyticsProduct = window.ShopifyAnalytics && window.ShopifyAnalytics.meta && window.ShopifyAnalytics.meta.product;
-        if (analyticsProduct){
+        if (analyticsProduct) {
           if (typeof analyticsProduct.image_url === 'string' && analyticsProduct.image_url) {
             return analyticsProduct.image_url;
           }
@@ -1351,20 +1348,20 @@
             return analyticsProduct.images[0];
           }
         }
-      }catch(e){}
+      } catch (e) { }
       return '';
     }
 
-    function isCustomerLoggedIn(){
-      try{
+    function isCustomerLoggedIn() {
+      try {
         const shopifyCustomer = window.Shopify && window.Shopify.customer;
         if (shopifyCustomer && (shopifyCustomer.id || shopifyCustomer.email)) {
           return true;
         }
-      }catch(e){}
-      try{
+      } catch (e) { }
+      try {
         const analyticsMeta = window.ShopifyAnalytics && window.ShopifyAnalytics.meta;
-        if (analyticsMeta){
+        if (analyticsMeta) {
           if (analyticsMeta.page && analyticsMeta.page.customerId) {
             return true;
           }
@@ -1372,31 +1369,31 @@
             return true;
           }
         }
-      }catch(e){}
-      try{
+      } catch (e) { }
+      try {
         const cookies = document.cookie ? document.cookie.split(';') : [];
-        for (let i = 0; i < cookies.length; i += 1){
+        for (let i = 0; i < cookies.length; i += 1) {
           const cookie = cookies[i].trim();
           if (!cookie) continue;
           const eqIndex = cookie.indexOf('=');
           if (eqIndex === -1) continue;
           const name = cookie.slice(0, eqIndex);
           const value = cookie.slice(eqIndex + 1);
-          if (name === 'customer_signed_in'){
+          if (name === 'customer_signed_in') {
             const normalized = value.toLowerCase();
-            if (normalized === 'true' || normalized === '1' || normalized === 'yes'){
+            if (normalized === 'true' || normalized === '1' || normalized === 'yes') {
               return true;
             }
           }
         }
-      }catch(e){}
+      } catch (e) { }
       return false;
     }
 
-    async function open(){
+    async function open() {
       const designMode = isDesignMode();
       const immediateGate = getImmediateGate(designMode);
-      if (immediateGate){
+      if (immediateGate) {
         showInlineNotice(immediateGate.message, immediateGate.tone || 'warning');
         if (immediateGate.blockButton) {
           setOpenButtonDisabled(true, immediateGate.code || 'immediate-gate', immediateGate.message);
@@ -1410,13 +1407,13 @@
       setOpenButtonDisabled(false);
 
       let preflight = null;
-      try{
+      try {
         preflight = await ensurePlanStatus();
-      }catch(e){
+      } catch (e) {
         preflight = null;
       }
       const preflightGate = getPreflightGate(preflight, designMode);
-      if (preflightGate){
+      if (preflightGate) {
         showInlineNotice(preflightGate.message, preflightGate.tone || 'warning');
         if (preflightGate.blockButton) {
           setOpenButtonDisabled(true, preflightGate.code || 'preflight-gate', preflightGate.message);
@@ -1432,16 +1429,16 @@
       clearInlineNotice();
       setOpenButtonDisabled(false);
 
-      if(!modal.parentElement || modal.parentElement !== document.body){
+      if (!modal.parentElement || modal.parentElement !== document.body) {
         document.body.appendChild(modal);
       }
       modal.hidden = false;
-      modal.setAttribute('data-state','opening');
+      modal.setAttribute('data-state', 'opening');
 
       showScreen('intro');
-      setTimeout(function(){ modal.removeAttribute('data-state'); }, 250);
+      setTimeout(function () { modal.removeAttribute('data-state'); }, 250);
     }
-    function close(){
+    function close() {
       modal.hidden = true;
       closeImageViewer(true);
       stopFeedbackCycle();
@@ -1451,30 +1448,30 @@
 
     openBtn && openBtn.addEventListener('click', open);
     closeBtn && closeBtn.addEventListener('click', close);
-    modal && modal.addEventListener('click', function(e){ if(e.target === modal) close(); });
+    modal && modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
 
-    modal && modal.addEventListener('click', function(e){
+    modal && modal.addEventListener('click', function (e) {
       const t = e.target;
-      if(!(t instanceof HTMLElement)) return;
-      if(t.matches('[data-action="continue"]')){
+      if (!(t instanceof HTMLElement)) return;
+      if (t.matches('[data-action="continue"]')) {
         showScreen('form');
-      } else if(t.matches('[data-action="close"]')){
+      } else if (t.matches('[data-action="close"]')) {
         close();
-      } else if(t.matches('[data-action="back-to-form"]')){
+      } else if (t.matches('[data-action="back-to-form"]')) {
         showScreen('form');
       }
     });
 
     if (imageViewer) {
-      imageViewer.addEventListener('click', function(event){
-        if (!imageViewerFrame || event.target === imageViewer || !imageViewerFrame.contains(event.target)){
+      imageViewer.addEventListener('click', function (event) {
+        if (!imageViewerFrame || event.target === imageViewer || !imageViewerFrame.contains(event.target)) {
           closeImageViewer();
         }
       });
     }
 
     if (imageViewerCloseBtn) {
-      imageViewerCloseBtn.addEventListener('click', function(event){
+      imageViewerCloseBtn.addEventListener('click', function (event) {
         if (event) {
           event.preventDefault();
           event.stopPropagation();
@@ -1484,13 +1481,13 @@
     }
 
     if (imageViewerFrame) {
-      imageViewerFrame.addEventListener('click', function(event){
+      imageViewerFrame.addEventListener('click', function (event) {
         event.stopPropagation();
       });
     }
 
     if (resultImageEl) {
-      resultImageEl.addEventListener('click', function(){
+      resultImageEl.addEventListener('click', function () {
         const src = resultImageEl.getAttribute('src');
         if (!src) return;
         const altText = resultImageEl.getAttribute('alt') || 'Try on result';
@@ -1502,9 +1499,9 @@
         }
         const popup = window.open(src, '_blank', 'noopener');
         if (popup && typeof popup === 'object') {
-          try{
+          try {
             popup.opener = null;
-          }catch(e){}
+          } catch (e) { }
         } else {
           window.location.href = src;
         }
@@ -1512,11 +1509,11 @@
     }
 
     const form = container.querySelector('.bould-widget__form');
-    if(form){
+    if (form) {
       const heightInput = form.querySelector('input[name="height"]');
       const unitSelect = form.querySelector('select[name="body_unit"]');
 
-      function updateHeightFieldAttributes(){
+      function updateHeightFieldAttributes() {
         if (!heightInput) return;
         const selected = unitSelect ? String(unitSelect.value || '').toLowerCase() : 'cm';
         if (selected === 'inch' || selected === 'inches' || selected === 'in') {
@@ -1535,7 +1532,35 @@
         unitSelect.addEventListener('change', updateHeightFieldAttributes);
       }
 
-      form.addEventListener('submit', async function(e){
+      const fileInput = form.querySelector('input[name="user_image"]');
+      const uploadText = form.querySelector('.bould-widget__upload-text');
+      const uploadIcon = form.querySelector('.bould-widget__upload-icon');
+
+      if (fileInput) {
+        fileInput.addEventListener('change', function () {
+          if (fileInput.files && fileInput.files[0]) {
+            if (uploadText) {
+              uploadText.textContent = fileInput.files[0].name;
+              uploadText.style.color = '#1E293B';
+              uploadText.style.fontWeight = '500';
+            }
+            if (uploadIcon) {
+              // Image icon instead of checkmark
+              uploadIcon.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>';
+              uploadIcon.style.background = '#E0E7FF';
+              uploadIcon.style.color = '#4F46E5';
+              uploadIcon.style.transform = 'none';
+            }
+            const uploadContainer = form.querySelector('.bould-widget__file-upload');
+            if (uploadContainer) {
+              uploadContainer.style.borderColor = '#6366F1';
+              uploadContainer.style.background = '#EEF2FF';
+            }
+          }
+        });
+      }
+
+      form.addEventListener('submit', async function (e) {
         e.preventDefault();
         const fd = new FormData(form);
         const file = fd.get('user_image');
@@ -1543,7 +1568,7 @@
         const bodyUnitRaw = fd.get('body_unit');
         const bodyUnit = typeof bodyUnitRaw === 'string' ? bodyUnitRaw.toLowerCase() : 'cm';
         const productImageUrl = getProductImageUrl();
-        if(!(file instanceof File) || !height){
+        if (!(file instanceof File) || !height) {
           return showError('Missing image or height.');
         }
         if (productImageUrl) {
@@ -1553,13 +1578,13 @@
         let firstFeedbackMessage = '';
         let finalFeedbackText = '';
         prepareForRequest();
-        try{
+        try {
           // Determine endpoint: app proxy or absolute API base from settings
           const productId = getProductId();
           const correlationId = Math.random().toString(36).slice(2, 10);
           const endpointBase = getEndpointBase();
           const endpoint = productId ? `${endpointBase}?product_id=${encodeURIComponent(productId)}` : endpointBase;
-          
+
           // Add request debugging
           console.log('[Bould Widget] Making request to:', endpoint);
           console.log('[Bould Widget] Form data:', {
@@ -1572,27 +1597,27 @@
             correlationId,
             productImageUrl
           });
-          
+
           // Add correlation id header and a timeout
           const controller = new AbortController();
           const timeoutMs = 28000; // Slightly under Shopify proxy 30s limit
           const timeout = setTimeout(() => controller.abort(), timeoutMs);
-          const res = await fetch(endpoint, { 
-            method: 'POST', 
-            body: fd, 
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            body: fd,
             headers: { 'Accept': 'application/json', 'X-Correlation-ID': correlationId },
             signal: controller.signal
           }).finally(() => clearTimeout(timeout));
-          
+
           console.log('[Bould Widget] Response status:', res.status);
           const resHeaders = Object.fromEntries(res.headers.entries());
           console.log('[Bould Widget] Response headers:', resHeaders);
-          
-          if(!res.ok){
+
+          if (!res.ok) {
             let errorMessage = 'Unknown server error';
             let debugInfo = {};
             const contentType = res.headers.get('content-type') || '';
-            
+
             // If response is not JSON, surface a proxy/config hint and raw text
             if (!contentType.includes('application/json')) {
               const text = await res.text().catch(() => '');
@@ -1606,17 +1631,17 @@
             try {
               const errorData = await res.json();
               console.log('[Bould Widget] Error response data:', errorData);
-              
+
               if (errorData.debug) {
                 debugInfo = errorData.debug;
                 console.log('[Bould Widget] Debug info:', debugInfo);
               }
-              
+
               // Handle specific error cases with better messages
-              if(res.status === 404){
+              if (res.status === 404) {
                 errorMessage = 'Widget endpoint not found. Please check your configuration.';
-              } else if(res.status === 409){
-                if (errorData.error && (errorData.error.includes('not processed') || errorData.error.includes('not been converted')) ) {
+              } else if (res.status === 409) {
+                if (errorData.error && (errorData.error.includes('not processed') || errorData.error.includes('not been converted'))) {
                   errorMessage = "This garment hasn't been edited.";
                 } else if (errorData.error && errorData.error.includes('processing')) {
                   errorMessage = 'This garment is currently being processed. Please wait a few minutes and try again.';
@@ -1625,11 +1650,11 @@
                 } else {
                   errorMessage = errorData.error || "This garment hasn't been edited.";
                 }
-              } else if(res.status === 502){
+              } else if (res.status === 502) {
                 errorMessage = 'Garment processing service is unavailable. Please ensure the garment has been properly converted.';
-              } else if(res.status === 504){
+              } else if (res.status === 504) {
                 errorMessage = 'The request timed out. Please try again in a moment.';
-              } else if(res.status === 500){
+              } else if (res.status === 500) {
                 errorMessage = errorData.error || 'Internal server error. Please try again later.';
               } else {
                 errorMessage = errorData.error || `Server error: ${res.status}`;
@@ -1640,14 +1665,14 @@
                 ? 'The request timed out at the edge (504). Please try again.'
                 : `Server error: ${res.status} - Unable to parse error response`;
             }
-            
+
             // Create enhanced error with debug info
             const enhancedError = new Error(errorMessage);
             enhancedError.debugInfo = Object.assign({ correlationId, productId, responseCorrelationId: resHeaders['x-correlation-id'] || resHeaders['x-request-id'] }, debugInfo || {});
             enhancedError.statusCode = res.status;
             throw enhancedError;
           }
-          
+
           const data = await res.json();
           console.log('[Bould Widget] Success response:', data);
 
@@ -1683,14 +1708,13 @@
           ]).slice(0, 3);
           tailoredFeedbackController = startLoadingFeedback(tailoredMessages, {
             loop: true,
-            loopCount: 3,
             holdMs: 2400,
-            fadeMs: 320,
+            fadeMs: 600,
             initialDelay: 0,
             hideStatus: true
           });
           tailoredFeedbackPromise = tailoredFeedbackController ? tailoredFeedbackController.promise : null;
-          
+
           // If queued (nano provider), poll status until ready
           if (data && data.queued && data.task_id) {
             console.log('[Bould Widget] Try-on queued. Polling for completion. task_id=', data.task_id);
@@ -1737,13 +1761,13 @@
           }
 
           // Check if garment processing is complete
-          if(!data || data.error){
-            if(data.error && data.error.includes('not processed')){
+          if (!data || data.error) {
+            if (data.error && data.error.includes('not processed')) {
               throw new Error('This garment has not been converted yet. Please run conversion in the Bould app first.');
             }
             throw new Error(data.error || 'Invalid response from server.');
           }
-          
+
           // Derive presentation data
           const recommendedSizeRaw = data.recommended_size || data.recommendedSize || '';
           const normalizedSize = String(recommendedSizeRaw || '').trim();
@@ -1805,7 +1829,7 @@
             confidenceText,
             feedbackText: displayFeedbackText
           });
-        }catch(err){
+        } catch (err) {
           console.error('[Bould Widget] Error occurred:', err);
           resetLoadingMessage();
 
@@ -1842,7 +1866,7 @@
       });
     }
 
-    function showError(message, debugInfo = null, options = {}){
+    function showError(message, debugInfo = null, options = {}) {
       const errorScreen = modal.querySelector('.bould-widget__screen--error');
       if (!errorScreen) {
         return;

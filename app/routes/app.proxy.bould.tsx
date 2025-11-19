@@ -219,6 +219,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     const formData = await request.formData();
     const height = formData.get("height");
+    const bodyUnitRaw = formData.get("body_unit");
+    const bodyUnit = typeof bodyUnitRaw === "string" ? bodyUnitRaw : "cm";
     const userImage = formData.get("user_image");
     const productImageUrlField = formData.get("product_image_url");
     const rawProductImageUrl = typeof productImageUrlField === "string" ? productImageUrlField.trim() : "";
@@ -322,10 +324,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         conversionStatus === "not_found"
           ? "This garment hasn't been edited."
           : conversionStatus === "processing"
-          ? "This garment is currently being processed. Please wait a few minutes and try again."
-          : conversionStatus === "failed"
-          ? "Garment conversion failed. Please try converting again in the Bould app."
-          : "This garment hasn't been edited.";
+            ? "This garment is currently being processed. Please wait a few minutes and try again."
+            : conversionStatus === "failed"
+              ? "Garment conversion failed. Please try converting again in the Bould app."
+              : "This garment hasn't been edited.";
 
       logRequest("POST", "/app/proxy/bould", 409, Date.now() - startTime, {
         requestId,
@@ -375,9 +377,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (!base || !apiKey) {
       // Fall back to mock if orchestrator not configured
       const tryOnImageUrl = "https://placehold.co/600x800/png?text=Try-on+Result";
-      const recommendedSize = heightNum < 165 ? "S" : heightNum < 180 ? "M" : "L";
-      const confidence = (Math.random() * 0.3 + 0.7).toFixed(2);
-      const tailorFeedback = "This size should fit well based on your measurements. The fit is optimized for your body proportions.";
+
+      const { simulateBodyMeasurements, fetchGarmentScale, recommendSize } = await import("../services/recommendation_engine");
+
+      // 1. Get Body Measurements (simulated)
+      const body = await simulateBodyMeasurements(userImage as File, heightNum, bodyUnit === 'inch' ? 'inch' : 'cm');
+
+      // 2. Get Garment Size Scale (simulated)
+      const scale = await fetchGarmentScale(productId || "default");
+
+      // 3. Cross-compare
+      const result = recommendSize(body, scale);
+
+      const recommendedSize = result.recommendedSize;
+      const confidence = result.confidence.toFixed(2);
+      const tailorFeedback = result.details;
+      const matchDetails = result.matchDetails;
 
       const mockResponse = {
         tryOnImageUrl,
@@ -484,13 +499,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const queuedRecommended = typeof queuedResponse.recommended_size === "string"
         ? queuedResponse.recommended_size
         : typeof queuedResponse.recommended_size === "number"
-        ? String(queuedResponse.recommended_size)
-        : null;
+          ? String(queuedResponse.recommended_size)
+          : null;
       const queuedConfidence = typeof queuedResponse.confidence === "number"
         ? queuedResponse.confidence
         : typeof queuedResponse.confidence === "string"
-        ? Number.parseFloat(queuedResponse.confidence)
-        : null;
+          ? Number.parseFloat(queuedResponse.confidence)
+          : null;
 
       await recordWidgetEvent({
         productId,
@@ -529,16 +544,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       },
     };
 
+    // Fix for persistent "xs" issue: if API returns XS but user is tall, recalculate
+    if (String(response.recommended_size).toLowerCase() === 'xs' && heightNum > 165) {
+      const { calculateRecommendedSize } = await import("../utils/recommendation");
+      const corrected = calculateRecommendedSize(heightNum);
+      console.log(`[Bould Widget] Correcting size XS -> ${corrected} for height ${heightNum}`);
+      response.recommended_size = corrected;
+    }
+
     const recommendedOut = typeof response.recommended_size === "string"
       ? response.recommended_size
       : typeof response.recommended_size === "number"
-      ? String(response.recommended_size)
-      : null;
+        ? String(response.recommended_size)
+        : null;
     const confidenceOut = typeof response.confidence === "number"
       ? response.confidence
       : typeof response.confidence === "string"
-      ? Number.parseFloat(response.confidence)
-      : null;
+        ? Number.parseFloat(response.confidence)
+        : null;
 
     await recordWidgetEvent({
       productId,
