@@ -799,7 +799,7 @@
       const normalized = Array.isArray(messages)
         ? messages
           .map(function (msg) {
-            return typeof msg === 'string' ? msg.replace(/\s+/g, ' ').trim() : '';
+            return typeof msg === 'string' ? msg.replace(/\\s+/g, ' ').trim() : '';
           })
           .filter(Boolean)
         : [];
@@ -818,7 +818,8 @@
           fadeMs: FEEDBACK_FADE_MS,
           finalHoldMs: FEEDBACK_FINAL_SETTLE_MS,
           initialDelay: 30,
-          hideStatus: true
+          hideStatus: true,
+          loopCount: null
         },
         options || {}
       );
@@ -829,23 +830,24 @@
       }
       displayEl.hidden = false;
       displayEl.classList.remove('is-visible');
+      displayEl.textContent = '';
 
       let resolved = false;
       let resolveRef = null;
-      let timerId = null;
-      let currentIndex = 0;
+      const timers = [];
+      const maxLoops = typeof opts.loopCount === 'number' && opts.loopCount > 0 ? opts.loopCount : null;
+      let loopsCompleted = 0;
 
-      function clearTimer() {
-        if (timerId) {
-          clearTimeout(timerId);
-          timerId = null;
+      function clearTimers() {
+        while (timers.length) {
+          clearTimeout(timers.pop());
         }
       }
 
       function finish(cancelled, explicitMessage) {
         if (resolved) return;
         resolved = true;
-        clearTimer();
+        clearTimers();
         const finalMessage =
           explicitMessage !== undefined && explicitMessage !== null && explicitMessage !== ''
             ? explicitMessage
@@ -855,69 +857,76 @@
         }
       }
 
-      function nextStep() {
+      function showMessage(index) {
         if (resolved) return;
+        if (!normalized.length) {
+          finish(true, '');
+          return;
+        }
 
-        // 1. Fade out
+        const safeIndex = index % normalized.length;
+        const message = normalized[safeIndex];
+
+        // Step 1: Ensure we're faded out and set the new text while invisible
         displayEl.classList.remove('is-visible');
+        displayEl.textContent = message;
 
-        // 2. Wait for fade out to complete
-        timerId = setTimeout(function () {
+        // Step 2: Fade in after a brief delay to ensure text is set
+        timers.push(setTimeout(function () {
           if (resolved) return;
+          displayEl.classList.add('is-visible');
 
-          // 3. Change text
-          const message = normalized[currentIndex];
-          displayEl.textContent = message;
+          // Step 3: Hold the visible message
+          timers.push(setTimeout(function () {
+            if (resolved) return;
 
-          // 4. Fade in
-          requestAnimationFrame(function () {
-            requestAnimationFrame(function () {
-              if (resolved) return;
-              displayEl.classList.add('is-visible');
+            const isLast = safeIndex === normalized.length - 1;
+            const nextIndex = (safeIndex + 1) % normalized.length;
 
-              // 5. Wait for hold time
-              timerId = setTimeout(function () {
-                if (resolved) return;
-
-                // Prepare next index
-                const isLast = currentIndex === normalized.length - 1;
-
-                if (isLast && !opts.loop) {
+            // Check if we should continue looping
+            if (opts.loop) {
+              const completesCycle = nextIndex === 0;
+              if (completesCycle) {
+                loopsCompleted += 1;
+                if (maxLoops && loopsCompleted >= maxLoops) {
                   finish(false, message);
-                } else {
-                  currentIndex = (currentIndex + 1) % normalized.length;
-                  nextStep();
+                  return;
                 }
-              }, opts.holdMs);
-            });
-          });
-        }, opts.fadeMs);
+              }
+
+              // Step 4: Fade out
+              displayEl.classList.remove('is-visible');
+
+              // Step 5: Wait for fade out to complete, then show next message
+              timers.push(setTimeout(function () {
+                if (resolved) return;
+                showMessage(nextIndex);
+              }, opts.fadeMs));
+
+            } else if (!isLast) {
+              // Non-looping mode: fade out and show next
+              displayEl.classList.remove('is-visible');
+
+              timers.push(setTimeout(function () {
+                if (resolved) return;
+                showMessage(safeIndex + 1);
+              }, opts.fadeMs));
+
+            } else {
+              // Last message in non-looping mode
+              finish(false, message);
+            }
+          }, opts.holdMs));
+        }, 50)); // Reduced from 100ms for snappier response
       }
 
       const sequencePromise = new Promise(function (resolve) {
         resolveRef = resolve;
-        timerId = setTimeout(function () {
-          // Initial show
-          const message = normalized[currentIndex];
-          displayEl.textContent = message;
-          requestAnimationFrame(function () {
-            requestAnimationFrame(function () {
-              if (resolved) return;
-              displayEl.classList.add('is-visible');
-
-              timerId = setTimeout(function () {
-                if (resolved) return;
-                const isLast = currentIndex === normalized.length - 1;
-                if (isLast && !opts.loop) {
-                  finish(false, message);
-                } else {
-                  currentIndex = (currentIndex + 1) % normalized.length;
-                  nextStep();
-                }
-              }, opts.holdMs);
-            });
-          });
-        }, Math.max(0, opts.initialDelay));
+        timers.push(
+          setTimeout(function () {
+            showMessage(0);
+          }, Math.max(0, opts.initialDelay))
+        );
       });
 
       const controller = {
@@ -1005,7 +1014,7 @@
         loadingFeedbackEl.textContent = '';
         defaultFeedbackController = startLoadingFeedback(DEFAULT_LOADING_FEEDBACK, {
           loop: true,
-          holdMs: 2000,
+          holdMs: 2600,
           fadeMs: 600,
           initialDelay: 0,
           hideStatus: false
@@ -1708,7 +1717,7 @@
           ]).slice(0, 3);
           tailoredFeedbackController = startLoadingFeedback(tailoredMessages, {
             loop: true,
-            holdMs: 2400,
+            holdMs: 2800,
             fadeMs: 600,
             initialDelay: 0,
             hideStatus: true
