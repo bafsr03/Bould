@@ -1136,17 +1136,7 @@
       if (designMode) {
         return null;
       }
-      if (!isCustomerLoggedIn()) {
-        return {
-          heading: 'Sign in required',
-          message: 'Please log in to your store account to use this feature.',
-          tone: 'info',
-          action: 'close',
-          blockButton: true,
-          code: 'login-required',
-          debug: { reason: 'not_logged_in' }
-        };
-      }
+      // Login check removed to allow guest access
       return null;
     }
 
@@ -1399,6 +1389,33 @@
       return false;
     }
 
+    function getStorageKey() {
+      const productId = getProductId();
+      return 'bould_result_' + (productId ? productId.replace(/\W/g, '_') : 'default');
+    }
+
+    function saveResultToStorage(details) {
+      if (!isCustomerLoggedIn()) return;
+      try {
+        const key = getStorageKey();
+        localStorage.setItem(key, JSON.stringify({
+          details: details,
+          timestamp: Date.now()
+        }));
+      } catch (e) { }
+    }
+
+    function loadResultFromStorage() {
+      if (!isCustomerLoggedIn()) return null;
+      try {
+        const key = getStorageKey();
+        const raw = localStorage.getItem(key);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        return data.details;
+      } catch (e) { return null; }
+    }
+
     async function open() {
       const designMode = isDesignMode();
       const immediateGate = getImmediateGate(designMode);
@@ -1444,6 +1461,14 @@
       modal.hidden = false;
       modal.setAttribute('data-state', 'opening');
 
+      const savedResult = loadResultFromStorage();
+      if (savedResult) {
+        revealResultView(savedResult);
+        showScreen('result');
+        setTimeout(function () { modal.removeAttribute('data-state'); }, 250);
+        return;
+      }
+
       showScreen('intro');
       setTimeout(function () { modal.removeAttribute('data-state'); }, 250);
     }
@@ -1467,6 +1492,8 @@
       } else if (t.matches('[data-action="close"]')) {
         close();
       } else if (t.matches('[data-action="back-to-form"]')) {
+        showScreen('form');
+      } else if (t.matches('[data-action="retake"]')) {
         showScreen('form');
       }
     });
@@ -1846,12 +1873,14 @@
             (finalFeedbackText || '').trim() ||
             (loadingStatusEl ? loadingStatusEl.dataset.defaultText || loadingDefaultText || '' : '');
 
-          revealResultView({
+          const resultDetails = {
             imageUrl: resolvedImageUrl,
             sizeText,
             confidenceText,
             feedbackText: displayFeedbackText
-          });
+          };
+          saveResultToStorage(resultDetails);
+          revealResultView(resultDetails);
         } catch (err) {
           console.error('[Bould Widget] Error occurred:', err);
           resetLoadingMessage();
