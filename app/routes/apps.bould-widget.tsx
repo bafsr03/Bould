@@ -498,6 +498,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (conversionRecord?.trueWaist) {
       recFd.append('true_waist', String(conversionRecord.trueWaist));
     }
+    if (conversionRecord?.tone) {
+      recFd.append('tone', String(conversionRecord.tone));
+    }
 
     const recRes = await fetchWithRetry(`${base}/v1/recommend`, {
       method: 'POST',
@@ -566,12 +569,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       };
     }
 
-    // Fix for persistent "xs" issue: if API returns XS but user is tall, recalculate
-    if (String(response.recommended_size).toLowerCase() === 'xs' && heightNum > 165) {
-      const { calculateRecommendedSize } = await import("../utils/recommendation");
-      const corrected = calculateRecommendedSize(heightNum);
-      console.log(`[Bould Widget] Correcting size XS -> ${corrected} for height ${heightNum}`);
-      response.recommended_size = corrected;
+    // Process tone if provided
+    if (conversionRecord?.tone && response.tailor_feedback) {
+      try {
+        const processedFeedback = await processToneWithAI(
+          response.tailor_feedback,
+          conversionRecord.tone,
+          response.recommended_size
+        );
+        response.tailor_feedback = processedFeedback;
+      } catch (toneError) {
+        console.error('[Bould Widget] Tone processing failed, using original feedback:', toneError);
+        // Keep original feedback if tone processing fails
+      }
     }
 
     const recommendedSizeOut = typeof response.recommended_size === 'string'
@@ -618,4 +628,57 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 };
 
+// Process tone using AI to rewrite feedback
+async function processToneWithAI(
+  originalFeedback: string,
+  tone: string,
+  recommendedSize: string | number
+): Promise<string> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    console.log('[Bould Widget] OpenAI API key not set, skipping tone processing');
+    return originalFeedback;
+  }
 
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a helpful assistant that rewrites size recommendation feedback in a specific tone. The recommended size is "${recommendedSize}". Rewrite the feedback to match the requested tone while keeping the recommendation clear. Keep it under 100 words. Do not add greetings or sign-offs.`
+          },
+          {
+            role: 'user',
+            content: `Tone: ${tone}\n\nOriginal feedback: ${originalFeedback}\n\nRewrite this in the specified tone:`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 150,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const rewrittenFeedback = data?.choices?.[0]?.message?.content?.trim();
+
+    if (rewrittenFeedback) {
+      console.log('[Bould Widget] Tone processing successful');
+      return rewrittenFeedback;
+    }
+
+    return originalFeedback;
+  } catch (error) {
+    console.error('[Bould Widget] Tone processing error:', error);
+    return originalFeedback;
+  }
+}

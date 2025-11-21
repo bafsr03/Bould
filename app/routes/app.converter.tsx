@@ -30,7 +30,7 @@ import {
   isApparelPreviewLimitExceeded,
 } from "../billing/usage.server";
 
-type ConversionStatus = "pending" | "processing" | "completed" | "failed";
+type ConversionStatus = "pending" | "processing" | "completed" | "failed" | "deactivated";
 
 type ShopifyProduct = {
   id: string;
@@ -50,6 +50,7 @@ type ConversionState = {
   trueSize?: string | null;
   unit?: string | null;
   trueWaist?: string | null;
+  tone?: string | null;
   deactivated?: boolean;
 };
 
@@ -108,23 +109,25 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const rec = existing.find((row: any) => row.shopifyProductId === p.id);
     states[p.id] = rec
       ? {
-          status: rec.status as ConversionStatus,
-          processed: rec.processed,
-          previewImageUrl: rec.previewImageUrl,
-          sizeScaleUrl: rec.sizeScaleUrl,
-          categoryId: rec.categoryId ?? null,
-          trueSize: rec.trueSize ?? null,
-          unit: rec.unit ?? null,
-          trueWaist: rec.trueWaist ?? null,
-        }
+        status: rec.status as ConversionStatus,
+        processed: rec.processed,
+        previewImageUrl: rec.previewImageUrl,
+        sizeScaleUrl: rec.sizeScaleUrl,
+        categoryId: rec.categoryId ?? null,
+        trueSize: rec.trueSize ?? null,
+        unit: rec.unit ?? null,
+        trueWaist: rec.trueWaist ?? null,
+        tone: rec.tone ?? null,
+      }
       : {
-          status: "pending",
-          processed: false,
-          categoryId: null,
-          trueSize: null,
-          unit: null,
-          trueWaist: null,
-        };
+        status: "pending",
+        processed: false,
+        categoryId: null,
+        trueSize: null,
+        unit: null,
+        trueWaist: null,
+        tone: null,
+      };
   }
 
   const planContext = await getPlanForShop({ billing, shopDomain });
@@ -195,6 +198,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const trueSize = String(formData.get("true_size") || "M");
     const categoryId = String(formData.get("category_id") || "1");
     const trueWaist = String(formData.get("true_waist") || "50");
+    const tone = String(formData.get("tone") || "");
     const unit = String(formData.get("unit") || "cm");
 
     console.log(`[CONVERTER] Starting conversion for product: ${productTitle} (${productId})`);
@@ -215,6 +219,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           trueSize,
           unit,
           trueWaist,
+          tone,
           shopDomain: shopDomain ?? existing.shopDomain ?? null,
         },
       });
@@ -229,6 +234,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           trueSize,
           unit,
           trueWaist,
+          tone,
           status: "processing",
           processed: false,
           shopDomain: shopDomain ?? null,
@@ -238,7 +244,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     try {
       console.log(`[CONVERTER] Preparing image for processing...`);
-      
+
       // Download image bytes
       const overrideImage = formData.get("override_image");
       let blobToSend: Blob | null = null;
@@ -259,7 +265,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       const baseUrl = process.env.GARMENTS_API_URL || "http://localhost:8001";
       console.log(`[CONVERTER] Using API base URL: ${baseUrl}`);
-      
+
       console.log(`[CONVERTER] Getting API token...`);
       const tokenRes = await fetch(`${baseUrl}/v1/auth/token`, { method: "POST" });
       if (!tokenRes.ok) {
@@ -273,7 +279,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       if (blobToSend) fd.append("image", blobToSend, `${productTitle || "garment"}.jpg`);
       fd.append("category_id", categoryId);
       fd.append("true_size", trueSize);
+      fd.append("true_size", trueSize);
       fd.append("true_waist", trueWaist);
+      if (tone) fd.append("tone", tone);
       fd.append("unit", unit);
 
       console.log(`[CONVERTER] Sending processing request to API...`);
@@ -292,7 +300,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
 
       console.log(`[CONVERTER] Processing response status: ${processRes.status}`);
-      
+
       if (!processRes.ok) {
         const errorText = await processRes.text();
         console.error(`[CONVERTER] Process failed: ${processRes.status} ${processRes.statusText}`);
@@ -302,12 +310,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       const result = await processRes.json();
       console.log(`[CONVERTER] Processing completed successfully:`, result);
-      
+
       const measurementVisPath = result?.measurement_vis as string | undefined;
       const sizeScalePath = result?.size_scale as string | undefined;
       const previewProxyUrl = measurementVisPath ? `/app/converter/file?path=${encodeURIComponent(measurementVisPath)}` : null;
       const sizeScaleProxyUrl = sizeScalePath ? `/app/converter/file?path=${encodeURIComponent(sizeScalePath)}` : null;
-      
+
       console.log(`[CONVERTER] Generated URLs:`, {
         measurementVisPath,
         sizeScalePath,
@@ -335,8 +343,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const updatedTrueSize = updatedRecord?.trueSize ?? trueSize;
       const updatedUnit = updatedRecord?.unit ?? unit;
       const updatedTrueWaist = updatedRecord?.trueWaist ?? trueWaist;
+      const updatedTone = updatedRecord?.tone ?? tone;
 
-      return json({ 
+      return json({
         success: true,
         productId,
         conversion: {
@@ -348,6 +357,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           trueSize: updatedTrueSize,
           unit: updatedUnit,
           trueWaist: updatedTrueWaist,
+          tone: updatedTone,
         }
       });
     } catch (err) {
@@ -373,10 +383,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             trueSize: updated?.trueSize ?? null,
             unit: updated?.unit ?? null,
             trueWaist: updated?.trueWaist ?? null,
+            tone: updated?.tone ?? null,
           },
         });
       }
-      return json({ 
+      return json({
         success: false,
         productId,
         error: errorMessage,
@@ -389,6 +400,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           trueSize,
           unit,
           trueWaist,
+          tone,
         }
       });
     }
@@ -402,7 +414,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         where: { id: rec.id },
         data: { status: "pending", processed: false, previewImageUrl: null, sizeScaleUrl: null },
       });
-      return json({ 
+      return json({
         success: true,
         productId,
         conversion: {
@@ -414,10 +426,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           trueSize: updated?.trueSize ?? null,
           unit: updated?.unit ?? null,
           trueWaist: updated?.trueWaist ?? null,
+          tone: updated?.tone ?? null,
         }
       });
     }
-    return json({ 
+    return json({
       success: true,
       productId,
       conversion: {
@@ -429,6 +442,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         trueSize: null,
         unit: null,
         trueWaist: null,
+        tone: null,
       }
     });
   }
@@ -448,12 +462,12 @@ export default function ConverterPage() {
   const handleConversionUpdate = useCallback(
     (productId: string, conversionData: Partial<ConversionState>) => {
       setConversionStates((prev) => ({
-      ...prev,
-      [productId]: {
-        ...prev[productId],
+        ...prev,
+        [productId]: {
+          ...prev[productId],
           ...conversionData,
         },
-    }));
+      }));
     },
     []
   );
@@ -496,15 +510,16 @@ export default function ConverterPage() {
             <Layout>
               <Layout.Section>
                 <Card>
-          <Box padding="400">
-            <ProductDetails
-              selected={selected}
-              status={selected ? conversionStates[selected.id] : undefined}
-              onConversionUpdate={handleConversionUpdate}
+                  <Box padding="400">
+                    <ProductDetails
+                      selected={selected}
+                      status={selected ? conversionStates[selected.id] : undefined}
+                      onConversionUpdate={handleConversionUpdate}
                       conversionDisabled={conversionDisabled}
                       disabledMessage={conversionDisabledMessage}
-            />
-          </Box>
+                      isPro={plan.id === "pro"}
+                    />
+                  </Box>
                 </Card>
               </Layout.Section>
 
@@ -515,7 +530,7 @@ export default function ConverterPage() {
                     imageUrl: selected ? conversionStates[selected.id]?.previewImageUrl ?? null : null,
                     sizeScaleUrl: selected ? conversionStates[selected.id]?.sizeScaleUrl ?? null : null,
                     statusLabel: selected ? `${conversionStates[selected.id]?.status || "pending"}` : undefined,
-            onConversionUpdate: handleConversionUpdate,
+                    onConversionUpdate: handleConversionUpdate,
                   };
                   return <Previewer {...previewerProps} />;
                 })()}
@@ -523,7 +538,7 @@ export default function ConverterPage() {
             </Layout>
           </Box>
 
-        <Box paddingBlockStart="600">
+          <Box paddingBlockStart="600">
             <LibraryTable
               products={products}
               states={conversionStates}

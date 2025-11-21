@@ -1,4 +1,4 @@
- import React, { useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   Badge,
   Box,
@@ -9,7 +9,7 @@ import {
   Thumbnail,
   Button,
 } from "@shopify/polaris";
-type ConversionStatus = "pending" | "processing" | "completed" | "failed";
+type ConversionStatus = "pending" | "processing" | "completed" | "failed" | "deactivated";
 
 type ShopifyProduct = {
   id: string;
@@ -31,6 +31,7 @@ interface Props {
     trueSize?: string | null;
     unit?: string | null;
     trueWaist?: string | null;
+    tone?: string | null;
     deactivated?: boolean;
   }>;
   onSelect?: (product: ShopifyProduct) => void;
@@ -114,12 +115,12 @@ export default function LibraryTable({
             st.deactivated
               ? "critical"
               : st.status === "completed"
-              ? "success"
-              : st.status === "processing"
-              ? "info"
-              : st.status === "failed"
-              ? "critical"
-              : "attention";
+                ? "success"
+                : st.status === "processing"
+                  ? "info"
+                  : st.status === "failed"
+                    ? "critical"
+                    : "attention";
           const statusLabel = st.deactivated
             ? "Deactivated"
             : st.status.charAt(0).toUpperCase() + st.status.slice(1);

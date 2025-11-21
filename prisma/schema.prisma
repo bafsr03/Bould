@@ -38,6 +38,7 @@ model Conversion {
   trueSize        String
   unit            String
   trueWaist       String?
+  tone            String?
   status          String   @default("pending") // pending | processing | completed | failed
   processed       Boolean  @default(false)
   previewImageUrl String?

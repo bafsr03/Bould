@@ -8,9 +8,13 @@ import {
   Text,
   TextField,
   Box,
+  Modal,
+  Banner,
+  Badge,
 } from "@shopify/polaris";
 import { useFetcher } from "@remix-run/react";
 import type { action as converterAction } from "../app.converter";
+import ToneEditor from "./ToneEditor";
 
 
 type ShopifyProduct = {
@@ -33,10 +37,12 @@ interface Props {
     trueSize?: string | null;
     unit?: string | null;
     trueWaist?: string | null;
+    tone?: string | null;
   } | null;
   onConversionUpdate?: (productId: string, conversionData: any) => void;
   conversionDisabled?: boolean;
   disabledMessage?: string;
+  isPro?: boolean;
 }
 
 export default function ControlsPanel({
@@ -45,12 +51,15 @@ export default function ControlsPanel({
   onConversionUpdate,
   conversionDisabled = false,
   disabledMessage,
+  isPro = false,
 }: Props) {
   const convertFetcher = useFetcher<typeof converterAction>();
   const [selectedCategory, setSelectedCategory] = useState("1");
   const [trueSize, setTrueSize] = useState("M");
   const [unit, setUnit] = useState("cm");
   const [trueWaist, setTrueWaist] = useState("50");
+  const [tone, setTone] = useState("");
+  const [isToneModalOpen, setIsToneModalOpen] = useState(false);
   const [overrideFile, setOverrideFile] = useState<File | null>(null);
   const isConverting = convertFetcher.state !== "idle";
 
@@ -80,13 +89,13 @@ export default function ControlsPanel({
     { label: "Sling dress (13)", value: "13" },
   ];
 
-  const sizeOptions = ["XXS","XS","S","M","L","XL","XXL","XXXL","ONEFIT"];
+  const sizeOptions = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL", "ONEFIT"];
 
   const handleCategoryChange = useCallback((value: string) => setSelectedCategory(value), []);
 
   const handleConvert = useCallback(() => {
     if (!selected) return;
-    
+
     const formData = new FormData();
     formData.append("intent", "convert");
     formData.append("productId", selected.id);
@@ -95,12 +104,13 @@ export default function ControlsPanel({
     formData.append("category_id", selectedCategory);
     formData.append("true_size", trueSize);
     formData.append("true_waist", trueWaist);
+    formData.append("tone", tone);
     formData.append("unit", unit);
-    
+
     if (overrideFile) {
       formData.append("override_image", overrideFile);
     }
-    
+
     const parsedCategory = Number.parseInt(selectedCategory, 10);
     const categoryNumeric = Number.isNaN(parsedCategory) ? null : parsedCategory;
 
@@ -113,13 +123,14 @@ export default function ControlsPanel({
       trueSize,
       unit,
       trueWaist,
+      tone,
     });
 
     convertFetcher.submit(formData, {
       method: "post",
       encType: "multipart/form-data",
     });
-  }, [selected, selectedCategory, trueSize, trueWaist, unit, overrideFile, onConversionUpdate, convertFetcher]);
+  }, [selected, selectedCategory, trueSize, trueWaist, tone, unit, overrideFile, onConversionUpdate, convertFetcher]);
 
   useEffect(() => {
     if (!selected) {
@@ -127,6 +138,7 @@ export default function ControlsPanel({
       setTrueSize("M");
       setUnit("cm");
       setTrueWaist("50");
+      setTone("");
       setOverrideFile(null);
       return;
     }
@@ -136,7 +148,8 @@ export default function ControlsPanel({
     setTrueSize(status?.trueSize || "M");
     setUnit(status?.unit || "cm");
     setTrueWaist(status?.trueWaist ?? "50");
-  }, [selected?.id, status?.categoryId, status?.trueSize, status?.unit, status?.trueWaist]);
+    setTone(status?.tone ?? "");
+  }, [selected?.id, status?.categoryId, status?.trueSize, status?.unit, status?.trueWaist, status?.tone]);
 
   const submitDisabled = !selected || isConverting || conversionDisabled;
 
@@ -155,10 +168,10 @@ export default function ControlsPanel({
                 status.status === 'completed'
                   ? 'success'
                   : status.status === 'processing'
-                  ? undefined
-                  : status.status === 'failed'
-                  ? 'critical'
-                  : 'subdued'
+                    ? undefined
+                    : status.status === 'failed'
+                      ? 'critical'
+                      : 'subdued'
               }
             >
               {status.processed ? 'Processed' : 'Not processed'} • {status.status}
@@ -172,12 +185,49 @@ export default function ControlsPanel({
       <Divider />
 
       <Text as="h3" variant="headingSm">True Size</Text>
-      <Select label="True Size" options={sizeOptions.map(s=>({label:s,value:s}))} value={trueSize} onChange={setTrueSize as any} />
+      <Select label="True Size" options={sizeOptions.map(s => ({ label: s, value: s }))} value={trueSize} onChange={setTrueSize as any} />
 
       <InlineStack gap="200">
-        <Select label="Unit" options={[{label:'cm',value:'cm'},{label:'inch',value:'inch'}]} value={unit} onChange={setUnit as any} />
+        <Select label="Unit" options={[{ label: 'cm', value: 'cm' }, { label: 'inch', value: 'inch' }]} value={unit} onChange={setUnit as any} />
         <TextField label="True Waist (optional)" value={trueWaist} onChange={setTrueWaist} autoComplete="off" type="number" />
       </InlineStack>
+      <Divider />
+
+      <BlockStack gap="200">
+        <InlineStack align="space-between" blockAlign="center">
+          <Text as="h3" variant="headingSm">Recommendation Tone</Text>
+          {!isPro && <Badge tone="info">Pro Feature</Badge>}
+        </InlineStack>
+        <Button
+          onClick={() => setIsToneModalOpen(true)}
+          disabled={!isPro}
+        >
+          {tone ? "Edit Tone Specification" : "Customize Tone"}
+        </Button>
+        {tone && (
+          <Box background="bg-surface-secondary" padding="300" borderRadius="200">
+            <Text as="p" variant="bodySm" tone="subdued">
+              {tone.length > 100 ? `${tone.substring(0, 100)}...` : tone}
+            </Text>
+          </Box>
+        )}
+      </BlockStack>
+
+      <Modal
+        open={isToneModalOpen}
+        onClose={() => setIsToneModalOpen(false)}
+        title="Customize Recommendation Tone"
+      >
+        <Modal.Section>
+          <ToneEditor
+            value={tone}
+            onChange={setTone}
+            onClose={() => setIsToneModalOpen(false)}
+            selectedProduct={selected}
+          />
+        </Modal.Section>
+      </Modal>
+
       <Divider />
 
       {selected && (
@@ -185,22 +235,22 @@ export default function ControlsPanel({
           <Text as="h3" variant="headingSm">Image</Text>
           <BlockStack gap="200">
             <img src={overrideFile ? URL.createObjectURL(overrideFile) : (selected.imageUrl || "https://placehold.co/120")}
-                 alt="Selected"
-                 style={{ 
-                   width: "100%", 
-                   maxWidth: "200px", 
-                   height: "auto", 
-                   objectFit: 'cover', 
-                   borderRadius: 8, 
-                   border: '1px solid #E1E3E5',
-                   display: "block",
-                   margin: "0 auto"
-                 }} />
+              alt="Selected"
+              style={{
+                width: "100%",
+                maxWidth: "200px",
+                height: "auto",
+                objectFit: 'cover',
+                borderRadius: 8,
+                border: '1px solid #E1E3E5',
+                display: "block",
+                margin: "0 auto"
+              }} />
             <InlineStack gap="200" wrap={false}>
-              <input 
-                name="override_image" 
-                type="file" 
-                accept="image/*" 
+              <input
+                name="override_image"
+                type="file"
+                accept="image/*"
                 onChange={(e) => setOverrideFile(e.target.files?.[0] || null)}
                 style={{ flex: 1, minWidth: 0 }}
               />
@@ -208,17 +258,17 @@ export default function ControlsPanel({
             </InlineStack>
           </BlockStack>
 
-          <Button 
-            onClick={handleConvert} 
-            variant="primary" 
+          <Button
+            onClick={handleConvert}
+            variant="primary"
             disabled={submitDisabled}
             loading={isConverting}
           >
             {conversionDisabled
               ? "Conversion paused"
               : isConverting
-              ? "Converting..."
-              : "Convert"}
+                ? "Converting..."
+                : "Convert"}
           </Button>
           {conversionDisabled && disabledMessage && (
             <Text as="p" tone="critical">
