@@ -60,6 +60,7 @@ interface Props {
         title: string;
         productType?: string;
     } | null;
+    onApplyToAll?: (tone: string) => void;
 }
 
 export default function ToneEditor({
@@ -67,6 +68,7 @@ export default function ToneEditor({
     onChange,
     onClose,
     selectedProduct,
+    onApplyToAll,
 }: Props) {
     const [customTone, setCustomTone] = useState(value);
     const [selectedPreset, setSelectedPreset] = useState<string>("");
@@ -258,6 +260,19 @@ export default function ToneEditor({
             {/* Actions */}
             <InlineStack gap="200" align="end">
                 <Button onClick={onClose}>Cancel</Button>
+                {onApplyToAll && (
+                    <Button
+                        onClick={() => {
+                            if (validation.isValid && customTone) {
+                                onApplyToAll(customTone);
+                                onClose();
+                            }
+                        }}
+                        disabled={!validation.isValid || !customTone}
+                    >
+                        Save & Apply to All
+                    </Button>
+                )}
                 <Button
                     variant="primary"
                     onClick={handleSave}

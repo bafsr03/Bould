@@ -447,6 +447,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     });
   }
 
+  if (intent === "apply_tone_to_all") {
+    const tone = String(formData.get("tone") || "");
+    console.log(`[CONVERTER] Applying tone to all products for shop ${shopDomain}: ${tone}`);
+
+    if (shopDomain) {
+      await (prisma as any).conversion.updateMany({
+        where: { shopDomain },
+        data: { tone }
+      });
+      return json({ success: true, appliedTone: tone });
+    }
+    return json({ error: "Shop domain not found" }, { status: 400 });
+  }
+
   return json({ ok: true });
 };
 

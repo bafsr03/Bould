@@ -132,6 +132,15 @@ export default function ControlsPanel({
     });
   }, [selected, selectedCategory, trueSize, trueWaist, tone, unit, overrideFile, onConversionUpdate, convertFetcher]);
 
+  const handleApplyToneToAll = useCallback((toneToApply?: string) => {
+    const targetTone = toneToApply || tone;
+    if (!targetTone) return;
+    const formData = new FormData();
+    formData.append("intent", "apply_tone_to_all");
+    formData.append("tone", targetTone);
+    convertFetcher.submit(formData, { method: "post" });
+  }, [tone, convertFetcher]);
+
   useEffect(() => {
     if (!selected) {
       setSelectedCategory("1");
@@ -224,6 +233,7 @@ export default function ControlsPanel({
             onChange={setTone}
             onClose={() => setIsToneModalOpen(false)}
             selectedProduct={selected}
+            onApplyToAll={isPro ? handleApplyToneToAll : undefined}
           />
         </Modal.Section>
       </Modal>

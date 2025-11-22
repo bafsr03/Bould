@@ -437,6 +437,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     recFd.append("category_id", String(conversionRecord.categoryId));
     recFd.append("true_size", String(conversionRecord.trueSize));
     recFd.append("unit", String(conversionRecord.unit || "cm"));
+    if (conversionRecord.tone) {
+      recFd.append("tone", conversionRecord.tone);
+    }
 
     // Inject brand chart if available
     if (conversionRecord.sizeScaleUrl) {
