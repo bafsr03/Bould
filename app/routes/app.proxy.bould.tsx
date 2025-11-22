@@ -438,6 +438,52 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     recFd.append("true_size", String(conversionRecord.trueSize));
     recFd.append("unit", String(conversionRecord.unit || "cm"));
 
+    // Inject brand chart if available
+    if (conversionRecord.sizeScaleUrl) {
+      try {
+        // sizeScaleUrl is like "/app/converter/file?path=api_runs/..."
+        // We need to extract the 'path' param
+        const scaleUrl = new URL(conversionRecord.sizeScaleUrl, "http://dummy");
+        const rawPath = scaleUrl.searchParams.get("path");
+
+        if (rawPath) {
+          // Use localhost:8001 as default for local dev (host machine accessing docker)
+          // If in production docker-to-docker, env var should be set to http://bould-stack-garments:8000
+          const garmentsApiUrl = process.env.GARMENTS_API_URL || "http://localhost:8001";
+
+          // We need a token to fetch the file. We can generate one or reuse a service token.
+          // For simplicity, we'll assume the internal API allows fetching with a service token or just generate one.
+          // Actually, let's just use the same token flow as app.converter.tsx
+
+          try {
+            const tokenRes = await fetch(`${garmentsApiUrl}/v1/auth/token`, { method: "POST" });
+            if (tokenRes.ok) {
+              const tokenJson = await tokenRes.json();
+              const token = tokenJson.token;
+
+              const fileRes = await fetch(`${garmentsApiUrl}/v1/files?path=${encodeURIComponent(rawPath)}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+
+              if (fileRes.ok) {
+                const chartJson = await fileRes.text(); // Get as text to pass as string
+                console.log(`[Bould Proxy] Injected brand chart from ${rawPath}`);
+                recFd.append("brand_chart_json", chartJson);
+              } else {
+                console.error(`[Bould Proxy] Failed to fetch brand chart: ${fileRes.status}`);
+              }
+            } else {
+              console.error(`[Bould Proxy] Failed to get auth token from ${garmentsApiUrl}: ${tokenRes.status}`);
+            }
+          } catch (fetchError) {
+            console.error(`[Bould Proxy] Network error fetching brand chart from ${garmentsApiUrl}:`, fetchError);
+          }
+        }
+      } catch (e) {
+        console.error("[Bould Proxy] Error injecting brand chart:", e);
+      }
+    }
+
     const recRes = await fetch(`${base.replace(/\/$/, "")}/v1/recommend`, {
       method: "POST",
       headers: { "x-api-key": apiKey },
@@ -550,13 +596,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       },
     };
 
-    // Fix for persistent "xs" issue: if API returns XS but user is tall, recalculate
-    if (String(response.recommended_size).toLowerCase() === 'xs' && heightNum > 165) {
-      const { calculateRecommendedSize } = await import("../utils/recommendation");
-      const corrected = calculateRecommendedSize(heightNum);
-      console.log(`[Bould Widget] Correcting size XS -> ${corrected} for height ${heightNum}`);
-      response.recommended_size = corrected;
-    }
+    // Fix for persistent "xs" issue removed as we now use correct brand charts
+
 
     const recommendedOut = typeof response.recommended_size === "string"
       ? response.recommended_size
