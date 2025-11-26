@@ -2,8 +2,6 @@
 {
   "name": "Bould size finder",
   "target": "section",
-  "javascript": "widget.js",
-  "stylesheet": "widget.css",
   "settings": [
     { "type": "text", "id": "button_label", "label": "Button label", "default": "Find my perfect size" },
     { "type": "text", "id": "button_classes", "label": "Additional button classes", "info": "Optional theme classes to apply to the launch button (e.g. 'button button--primary')." },
@@ -13,6 +11,9 @@
   ]
 }
 {% endschema %}
+
+{{ 'widget.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'widget.js' | asset_url }}" defer></script>
 
 {% assign featured_image = product.featured_image %}
 {% if featured_image == blank and product.images.size > 0 %}
@@ -114,7 +115,7 @@
         </div>
 
         <div class="bould-widget__screen bould-widget__screen--result" data-screen="result" hidden>
-          <img class="bould-widget__result-image bould-widget__result-stage" alt="Try on result" />
+          <img class="bould-widget__result-image bould-widget__result-stage" alt="Try on result" width="300" height="400" />
           <h4 class="bould-widget__size bould-widget__result-stage"></h4>
           <p class="bould-widget__confidence bould-widget__result-stage"></p>
           <p class="bould-widget__feedback bould-widget__result-stage bould-widget__fade-text"></p>

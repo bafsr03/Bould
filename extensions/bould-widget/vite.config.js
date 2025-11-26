@@ -11,6 +11,6 @@ export default defineConfig({
             fileName: () => 'widget.js',
             formats: ['iife'],
         },
-        minify: false, // Keep it readable for now, or true for production
+        minify: true, // Keep it readable for now, or true for production
     },
 });

@@ -1,0 +1,9 @@
+src
+node_modules
+vite.config.js
+package.json
+package-lock.json
+mock-api.js
+test-widget.html
+README.md
+README-REFACTOR.md

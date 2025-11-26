@@ -545,7 +545,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         provider: "nano",
         recommended_size: recData.recommended_size || recData.recommendedSize,
         confidence: recData.confidence,
-        tailor_feedback: recData.tailor_feedback || recData.tailorFeedback,
+        tailor_feedback_sequence: recData.tailor_feedback_sequence || recData.tailorFeedbackSequence || [],
+        final_feedback: recData.final_feedback || recData.finalFeedback,
         debug: { requestId, productId, conversionStatus, correlationId: clientCorrelationId },
       } as any;
 
@@ -588,7 +589,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       tryOnImageUrl,
       recommended_size: recData.recommended_size || recData.recommendedSize,
       confidence: recData.confidence,
-      tailor_feedback: recData.tailor_feedback || recData.tailorFeedback,
+      tailor_feedback_sequence: recData.tailor_feedback_sequence || recData.tailorFeedbackSequence || [],
+      final_feedback: recData.final_feedback || recData.finalFeedback,
       debug: {
         measurement_vis_url: recData?.debug?.measurement_vis_url || "",
         requestId,
