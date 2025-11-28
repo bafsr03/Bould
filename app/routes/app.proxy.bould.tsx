@@ -539,14 +539,25 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       console.log('[Bould Proxy] Extracted task_id:', taskId, 'from tryData:', tryData);
 
+      // Process tailor_feedback from recommender API
+      const tailorFeedback = recData.tailor_feedback || recData.tailorFeedback || "";
+      const tailorSequence = recData.tailor_feedback_sequence || recData.tailorFeedbackSequence;
+      
+      // Convert single feedback string to sequence if needed
+      const feedbackSequence = Array.isArray(tailorSequence) && tailorSequence.length > 0
+        ? tailorSequence
+        : tailorFeedback
+          ? [tailorFeedback]
+          : [];
+
       const queuedResponse = {
         queued: true,
         task_id: taskId,
         provider: "nano",
         recommended_size: recData.recommended_size || recData.recommendedSize,
         confidence: recData.confidence,
-        tailor_feedback_sequence: recData.tailor_feedback_sequence || recData.tailorFeedbackSequence || [],
-        final_feedback: recData.final_feedback || recData.finalFeedback,
+        tailor_feedback_sequence: feedbackSequence,
+        final_feedback: recData.final_feedback || recData.finalFeedback || tailorFeedback,
         debug: { requestId, productId, conversionStatus, correlationId: clientCorrelationId },
       } as any;
 
@@ -585,12 +596,23 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const resultImage = tryData.result_image_url || tryData.url || tryData.tryOnImageUrl || "";
     const tryOnImageUrl = resultImage.startsWith("http") ? resultImage : `${base.replace(/\/$/, "")}${resultImage}`;
 
+    // Process tailor_feedback from recommender API
+    const tailorFeedback = recData.tailor_feedback || recData.tailorFeedback || "";
+    const tailorSequence = recData.tailor_feedback_sequence || recData.tailorFeedbackSequence;
+    
+    // Convert single feedback string to sequence if needed
+    const feedbackSequence = Array.isArray(tailorSequence) && tailorSequence.length > 0
+      ? tailorSequence
+      : tailorFeedback
+        ? [tailorFeedback]
+        : [];
+
     const response = {
       tryOnImageUrl,
       recommended_size: recData.recommended_size || recData.recommendedSize,
       confidence: recData.confidence,
-      tailor_feedback_sequence: recData.tailor_feedback_sequence || recData.tailorFeedbackSequence || [],
-      final_feedback: recData.final_feedback || recData.finalFeedback,
+      tailor_feedback_sequence: feedbackSequence,
+      final_feedback: recData.final_feedback || recData.finalFeedback || tailorFeedback,
       debug: {
         measurement_vis_url: recData?.debug?.measurement_vis_url || "",
         requestId,

@@ -503,16 +503,21 @@ import { DEFAULT_LOADING_FEEDBACK, DEFAULT_ERROR_HEADING } from './constants';
                     const displayUnit = String(displayUnitRaw || 'cm').toLowerCase() === 'inch' ? 'inch' : 'cm';
                     const matchDetails = data && typeof data === 'object' ? data.match_details || data.matchDetails || {} : {};
 
-                    feedbackMessages = extractFeedbackMessages(data, loadingStatusEl?.dataset.defaultText || '').slice(0, 3);
+                    // Use preview_feedback for the loading cycle
+                    feedbackMessages = Array.isArray(data.preview_feedback) && data.preview_feedback.length 
+                        ? data.preview_feedback 
+                        : extractFeedbackMessages(data, loadingStatusEl?.dataset.defaultText || '').slice(0, 3);
+                    
                     if (!feedbackMessages.length && firstFeedbackMessage) {
                         feedbackMessages = [firstFeedbackMessage];
                     }
-                    firstFeedbackMessage = feedbackMessages[0] || firstFeedbackMessage || '';
-                    finalFeedbackText = feedbackMessages.join(' ').trim();
+                    
+                    // Use final_feedback for the result screen
+                    finalFeedbackText = data.final_feedback || data.tailor_feedback || '';
                     if (!finalFeedbackText) {
-                        finalFeedbackText = firstFeedbackMessage || (loadingStatusEl ? loadingStatusEl.dataset.defaultText || '' : '');
+                        finalFeedbackText = feedbackMessages.join(' ').trim();
                     }
-
+                    
                     loadingManager.stopFeedbackCycle(false);
                     if (defaultFeedbackPromise) {
                         try {
@@ -525,8 +530,9 @@ import { DEFAULT_LOADING_FEEDBACK, DEFAULT_ERROR_HEADING } from './constants';
                     defaultFeedbackPromise = null;
 
                     const tailoredMessages = (feedbackMessages.length ? feedbackMessages : [
-                        finalFeedbackText || firstFeedbackMessage || DEFAULT_LOADING_FEEDBACK[DEFAULT_LOADING_FEEDBACK.length - 1]
+                        DEFAULT_LOADING_FEEDBACK[DEFAULT_LOADING_FEEDBACK.length - 1]
                     ]).slice(0, 3);
+                    
                     tailoredFeedbackController = loadingManager.startFeedback(tailoredMessages, {
                         loop: true,
                         holdMs: 2800,
