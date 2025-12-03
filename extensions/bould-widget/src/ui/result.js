@@ -57,13 +57,7 @@ export class ResultManager {
             }
         }
         if (this.resultConfidenceEl) {
-            if (details.confidenceText) {
-                this.resultConfidenceEl.textContent = details.confidenceText;
-                this.resultConfidenceEl.hidden = false;
-            } else {
-                this.resultConfidenceEl.textContent = '';
-                this.resultConfidenceEl.hidden = true;
-            }
+            this.resultConfidenceEl.hidden = true;
         }
         if (this.resultFeedbackEl) {
             if (details.feedbackText) {

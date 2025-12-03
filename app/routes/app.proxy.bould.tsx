@@ -238,13 +238,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     const heightNum = parseFloat(height);
-    if (isNaN(heightNum) || heightNum < 80 || heightNum > 250) {
+    const isInch = bodyUnit === 'inch';
+    const minHeight = isInch ? 25 : 65;
+    const maxHeight = isInch ? 107 : 272;
+
+    if (isNaN(heightNum) || heightNum < minHeight || heightNum > maxHeight) {
       logRequest("POST", "/app/proxy/bould", 400, Date.now() - startTime, {
         requestId,
         error: "Invalid height",
         height: heightNum,
+        unit: bodyUnit
       });
-      return json({ error: "Height must be between 80 and 250 cm", debug: { requestId } }, { status: 400 });
+      return json({ error: `Height must be between ${minHeight} and ${maxHeight} ${isInch ? 'inches' : 'cm'}`, debug: { requestId } }, { status: 400 });
     }
 
     const url = new URL(request.url);

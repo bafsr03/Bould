@@ -328,17 +328,103 @@ import { DEFAULT_LOADING_FEEDBACK, DEFAULT_ERROR_HEADING } from './constants';
             const heightInput = form.querySelector('input[name="height"]');
             const unitSelect = form.querySelector('select[name="body_unit"]');
 
+            // Create feet/inches inputs wrapper
+            const heightWrapper = heightInput ? heightInput.parentElement : null;
+            let feetInput = null;
+            let inchesInput = null;
+            let imperialWrapper = null;
+
+            // Style the unit select to match inputs
+            if (unitSelect) {
+                unitSelect.style.appearance = 'none';
+                unitSelect.style.backgroundImage = `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236B7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`;
+                unitSelect.style.backgroundRepeat = 'no-repeat';
+                unitSelect.style.backgroundPosition = 'right 12px center';
+                unitSelect.style.paddingRight = '32px';
+            }
+
+            if (heightWrapper) {
+                // Ensure wrapper is relative for absolute positioning if needed, 
+                // but flex is better. Assuming heightWrapper is a flex container or we make it one.
+                // Actually, looking at standard forms, inputs are usually block. 
+                // We'll insert the imperial wrapper.
+                
+                imperialWrapper = document.createElement('div');
+                imperialWrapper.className = 'bould-widget__imperial-inputs';
+                imperialWrapper.style.display = 'none';
+                imperialWrapper.style.gap = '8px';
+                imperialWrapper.style.width = '100%'; // Take full width
+
+                feetInput = document.createElement('input');
+                feetInput.type = 'number';
+                feetInput.placeholder = 'Ft';
+                feetInput.className = heightInput.className; // Copy styles
+                feetInput.min = '2';
+                feetInput.max = '8';
+                feetInput.style.flex = '1';
+                feetInput.required = true; // Make feet required when visible
+
+                inchesInput = document.createElement('input');
+                inchesInput.type = 'number';
+                inchesInput.placeholder = 'In';
+                inchesInput.className = heightInput.className; // Copy styles
+                inchesInput.min = '0';
+                inchesInput.max = '11';
+                inchesInput.style.flex = '1';
+                inchesInput.required = true; // Make inches required when visible
+
+                imperialWrapper.appendChild(feetInput);
+                imperialWrapper.appendChild(inchesInput);
+                
+                // Insert after the original height input
+                if (heightInput.nextSibling) {
+                    heightWrapper.insertBefore(imperialWrapper, heightInput.nextSibling);
+                } else {
+                    heightWrapper.appendChild(imperialWrapper);
+                }
+
+                // Sync logic
+                const updateHiddenHeight = () => {
+                    const ft = parseInt(feetInput.value) || 0;
+                    const inc = parseInt(inchesInput.value) || 0;
+                    const totalInches = (ft * 12) + inc;
+                    heightInput.value = totalInches > 0 ? totalInches : '';
+                };
+
+                feetInput.addEventListener('input', updateHiddenHeight);
+                inchesInput.addEventListener('input', updateHiddenHeight);
+            }
+
             function updateHeightFieldAttributes() {
                 if (!heightInput) return;
                 const selected = unitSelect ? String(unitSelect.value || '').toLowerCase() : 'cm';
+                
                 if (selected === 'inch' || selected === 'inches' || selected === 'in') {
-                    heightInput.placeholder = 'Height (in)';
-                    heightInput.min = '31';
-                    heightInput.max = '99';
+                    // Show imperial inputs, hide metric input
+                    if (imperialWrapper) {
+                        imperialWrapper.style.display = 'flex';
+                        heightInput.style.display = 'none';
+                        heightInput.required = false; // Disable required on hidden input
+                        if (feetInput) feetInput.required = true;
+                        if (inchesInput) inchesInput.required = true;
+                    } else {
+                        // Fallback
+                        heightInput.placeholder = 'Height (in)';
+                        heightInput.min = '25';
+                        heightInput.max = '107';
+                    }
                 } else {
+                    // Show metric input, hide imperial inputs
+                    if (imperialWrapper) {
+                        imperialWrapper.style.display = 'none';
+                        if (feetInput) feetInput.required = false;
+                        if (inchesInput) inchesInput.required = false;
+                        heightInput.style.display = 'block';
+                        heightInput.required = true;
+                    }
                     heightInput.placeholder = 'Height (cm)';
-                    heightInput.min = '80';
-                    heightInput.max = '250';
+                    heightInput.min = '65';
+                    heightInput.max = '272';
                 }
             }
 

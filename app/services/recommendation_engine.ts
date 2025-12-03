@@ -141,11 +141,14 @@ export async function simulateBodyMeasurements(image: File | Blob, height: numbe
     // In a real implementation, this would upload the image to the CV API
     // For now, we generate plausible measurements based on height
 
+    // If unit is inch, height is already in inches.
+    // We need height in cm for the estimation formulas which are based on cm.
     const heightCm = unit === 'inch' ? height * 2.54 : height;
 
     // Simple estimation ratios (average human proportions)
-    return {
-        height: height,
+    // We calculate in CM first
+    const measurementsCm = {
+        height: heightCm,
         chest: heightCm * 0.58 + (Math.random() * 10 - 5),
         waist: heightCm * 0.45 + (Math.random() * 10 - 5),
         hips: heightCm * 0.55 + (Math.random() * 10 - 5),
@@ -156,7 +159,30 @@ export async function simulateBodyMeasurements(image: File | Blob, height: numbe
         belly: heightCm * 0.48,
         wrist: heightCm * 0.10,
         ankle: heightCm * 0.12,
-        unit: unit
+    };
+
+    // If requested unit is inch, convert back to inch for the return value
+    // so that normalizeBodyMeasurements doesn't double-convert
+    if (unit === 'inch') {
+        return {
+            height: height, // Original input
+            chest: measurementsCm.chest / 2.54,
+            waist: measurementsCm.waist / 2.54,
+            hips: measurementsCm.hips / 2.54,
+            shoulder_width: measurementsCm.shoulder_width / 2.54,
+            arm_length: measurementsCm.arm_length / 2.54,
+            thigh: measurementsCm.thigh / 2.54,
+            neck: measurementsCm.neck / 2.54,
+            belly: measurementsCm.belly / 2.54,
+            wrist: measurementsCm.wrist / 2.54,
+            ankle: measurementsCm.ankle / 2.54,
+            unit: 'inch'
+        };
+    }
+
+    return {
+        ...measurementsCm,
+        unit: 'cm'
     };
 }
 
