@@ -20,6 +20,7 @@ const Previewer: React.FC<Props> = ({ productId, imageUrl, sizeScaleUrl, statusL
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [displayUnit, setDisplayUnit] = useState<"cm" | "inch">("cm");
 
   const isDeleting = deleteFetcher.state !== "idle";
   const statusDisplay = useMemo(() => {
@@ -61,9 +62,18 @@ const Previewer: React.FC<Props> = ({ productId, imageUrl, sizeScaleUrl, statusL
     return () => { aborted = true; };
   }, [sizeScaleUrl]);
 
+  // Determine which scale to use based on displayUnit
+  const activeScale = useMemo(() => {
+    if (!scaleData) return null;
+    if (displayUnit === "inch" && scaleData.scale_in) return scaleData.scale_in;
+    if (displayUnit === "cm" && scaleData.scale_cm) return scaleData.scale_cm;
+    // Fallback to legacy scale
+    return scaleData.scale || null;
+  }, [scaleData, displayUnit]);
+
   const sizeOrder = useMemo(() => {
-    if (!scaleData?.scale || typeof scaleData.scale !== "object") return [] as string[];
-    const sizes = Object.keys(scaleData.scale);
+    if (!activeScale || typeof activeScale !== "object") return [] as string[];
+    const sizes = Object.keys(activeScale);
     return [...sizes].sort((a, b) => {
       const ia = SIZE_ORDER.indexOf(a as any);
       const ib = SIZE_ORDER.indexOf(b as any);
@@ -72,13 +82,13 @@ const Previewer: React.FC<Props> = ({ productId, imageUrl, sizeScaleUrl, statusL
       if (ib === -1) return -1;
       return ia - ib;
     });
-  }, [scaleData]);
+  }, [activeScale]);
 
   const measurementKeys = useMemo(() => {
-    if (!scaleData?.scale || typeof scaleData.scale !== "object") return [] as string[];
-    const first = sizeOrder.find((s) => scaleData.scale[s]);
-    return first ? Object.keys(scaleData.scale[first] || {}) : [];
-  }, [scaleData, sizeOrder]);
+    if (!activeScale || typeof activeScale !== "object") return [] as string[];
+    const first = sizeOrder.find((s) => activeScale[s]);
+    return first ? Object.keys(activeScale[first] || {}) : [];
+  }, [activeScale, sizeOrder]);
   
   const handleDelete = () => {
     if (!productId) return;
@@ -273,7 +283,27 @@ const Previewer: React.FC<Props> = ({ productId, imageUrl, sizeScaleUrl, statusL
 
         {sizeScaleUrl && (
           <Box padding="300">
-            <Text as="h3" variant="headingSm">Size scale</Text>
+            <InlineStack align="space-between" blockAlign="center">
+              <Text as="h3" variant="headingSm">Size scale</Text>
+              {scaleData && (scaleData.scale_cm || scaleData.scale_in) && (
+                <ButtonGroup variant="segmented">
+                  <Button
+                    pressed={displayUnit === "cm"}
+                    onClick={() => setDisplayUnit("cm")}
+                    disabled={!scaleData.scale_cm}
+                  >
+                    CM
+                  </Button>
+                  <Button
+                    pressed={displayUnit === "inch"}
+                    onClick={() => setDisplayUnit("inch")}
+                    disabled={!scaleData.scale_in}
+                  >
+                    Inch
+                  </Button>
+                </ButtonGroup>
+              )}
+            </InlineStack>
             <Box paddingBlockStart="200">
               {!scaleData && !scaleError && (
                 <Text as="p" tone="subdued">Loading size scale…</Text>
@@ -304,7 +334,7 @@ const Previewer: React.FC<Props> = ({ productId, imageUrl, sizeScaleUrl, statusL
                           left: 0,
                           zIndex: 1
                         }}>
-                          Measurement ({scaleData.unit || "cm"})
+                          Measurement ({displayUnit})
                         </th>
                         {sizeOrder.map((sz) => {
                           const isTrueSize = scaleData?.true_size?.toUpperCase() === sz.toUpperCase();
@@ -349,7 +379,7 @@ const Previewer: React.FC<Props> = ({ productId, imageUrl, sizeScaleUrl, statusL
                                 minWidth: "80px"
                               }}>
                                 {(() => {
-                                  const value = scaleData?.scale?.[sz]?.[k];
+                                  const value = activeScale?.[sz]?.[k];
                                   if (value === null || value === undefined) return "-";
                                   const num = parseFloat(value);
                                   return isNaN(num) ? value : num.toFixed(2);

@@ -697,15 +697,7 @@ import { DEFAULT_LOADING_FEEDBACK, DEFAULT_ERROR_HEADING } from './constants';
                             confidenceText = 'Confidence: ' + numericConfidence.toFixed(2) + '%';
                         }
                     }
-                    const slackSummary = summarizeSlack(matchDetails, displayUnit);
-                    if (confidenceText) {
-                        confidenceText += ' • Measurements in ' + unitLabelLong;
-                    } else {
-                        confidenceText = 'Measurements in ' + unitLabelLong;
-                    }
-                    if (slackSummary) {
-                        confidenceText += ' • ' + slackSummary;
-                    }
+
 
                     const imageCandidates = [];
                     if (data.tryOnImageUrl) imageCandidates.push(data.tryOnImageUrl);
@@ -735,7 +727,9 @@ import { DEFAULT_LOADING_FEEDBACK, DEFAULT_ERROR_HEADING } from './constants';
                         imageUrl: resolvedImageUrl,
                         sizeText,
                         confidenceText,
-                        feedbackText: displayFeedbackText
+                        feedbackText: displayFeedbackText,
+                        matchDetails,
+                        displayUnit
                     };
                     storageService.save(resultDetails);
                     resultManager.reveal(resultDetails, showScreen);

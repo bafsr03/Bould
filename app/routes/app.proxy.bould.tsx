@@ -442,6 +442,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     recFd.append("category_id", String(conversionRecord.categoryId));
     recFd.append("true_size", String(conversionRecord.trueSize));
     recFd.append("unit", String(conversionRecord.unit || "cm"));
+    recFd.append("body_unit", bodyUnit);
     if (conversionRecord.tone) {
       recFd.append("tone", conversionRecord.tone);
     }
