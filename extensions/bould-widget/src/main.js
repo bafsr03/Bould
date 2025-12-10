@@ -441,19 +441,21 @@ import { DEFAULT_LOADING_FEEDBACK, DEFAULT_ERROR_HEADING } from './constants';
                 fileInput.addEventListener('change', function () {
                     if (fileInput.files && fileInput.files[0]) {
                         if (uploadText) {
-                            uploadText.textContent = fileInput.files[0].name;
-                            uploadText.style.color = '#1E293B';
-                            uploadText.style.fontWeight = '500';
+                            uploadText.textContent = 'Image loaded';
+                            uploadText.style.color = '#4F46E5';
+                            uploadText.style.fontWeight = '600';
                         }
                         if (uploadIcon) {
-                            uploadIcon.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>';
-                            uploadIcon.style.background = '#E0E7FF';
-                            uploadIcon.style.color = '#4F46E5';
+                            uploadIcon.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+                            uploadIcon.style.background = '#4F46E5';
+                            uploadIcon.style.color = '#ffffff';
                             uploadIcon.style.transform = 'none';
+                            uploadIcon.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.35)';
                         }
                         const uploadContainer = form.querySelector('.bould-widget__file-upload');
                         if (uploadContainer) {
-                            uploadContainer.style.borderColor = '#6366F1';
+                            uploadContainer.style.borderColor = '#4F46E5';
+                            uploadContainer.style.borderStyle = 'solid';
                             uploadContainer.style.background = '#EEF2FF';
                         }
                     }
