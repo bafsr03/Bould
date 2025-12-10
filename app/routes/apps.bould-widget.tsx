@@ -485,35 +485,49 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const garmentFileName = (conversionRecord.imageUrl as string).split('/').pop() || 'garment.jpg';
     const garmentMime = garmentRes.headers.get('content-type') || 'image/jpeg';
 
-    // Call recommend endpoint
-    const recFd = new FormData();
-    recFd.append('height', String(heightNum));
-    recFd.append('user_image', new Blob([userBuffer], { type: userMime }) as any, userFileName);
-    recFd.append('garment_image', new Blob([garmentBuffer], { type: garmentMime }) as any, garmentFileName);
-    recFd.append('category_id', String(conversionRecord.categoryId));
-    recFd.append('true_size', String(conversionRecord.trueSize));
-    recFd.append('unit', String(conversionRecord.unit || 'cm'));
-    recFd.append('body_unit', normalizedBodyUnit);
-    recFd.append('display_unit', normalizedBodyUnit);
-    if (conversionRecord?.trueWaist) {
-      recFd.append('true_waist', String(conversionRecord.trueWaist));
-    }
-    if (conversionRecord?.tone) {
-      recFd.append('tone', String(conversionRecord.tone));
-    }
+    let recData: any;
+    const categoryIdNum = Number(conversionRecord.categoryId);
+    console.log(`[WIDGET] Processing product ${productId} with category ${categoryIdNum} (raw: ${conversionRecord.categoryId})`);
 
-    const recRes = await fetchWithRetry(`${base}/v1/recommend`, {
-      method: 'POST',
-      headers: { 'x-api-key': apiKey, 'X-Correlation-ID': clientCorrelationId || requestId },
-      body: recFd as any,
-      retry: 2,
-      retryDelayMs: 400
-    });
-    if (!recRes.ok) {
-      const text = await recRes.text().catch(() => '');
-      return json({ error: 'Recommendation service error', debug: { requestId, status: recRes.status, body: text } }, { status: 502 });
+    if (categoryIdNum === 99) {
+      recData = {
+        recommended_size: null,
+        confidence: 1.0,
+        tailor_feedback: "This garment is designed to fit everyone.",
+        display_unit: normalizedBodyUnit,
+        match_details: null
+      };
+    } else {
+      // Call recommend endpoint
+      const recFd = new FormData();
+      recFd.append('height', String(heightNum));
+      recFd.append('user_image', new Blob([userBuffer], { type: userMime }) as any, userFileName);
+      recFd.append('garment_image', new Blob([garmentBuffer], { type: garmentMime }) as any, garmentFileName);
+      recFd.append('category_id', String(conversionRecord.categoryId));
+      recFd.append('true_size', String(conversionRecord.trueSize));
+      recFd.append('unit', String(conversionRecord.unit || 'cm'));
+      recFd.append('body_unit', normalizedBodyUnit);
+      recFd.append('display_unit', normalizedBodyUnit);
+      if (conversionRecord?.trueWaist) {
+        recFd.append('true_waist', String(conversionRecord.trueWaist));
+      }
+      if (conversionRecord?.tone) {
+        recFd.append('tone', String(conversionRecord.tone));
+      }
+
+      const recRes = await fetchWithRetry(`${base}/v1/recommend`, {
+        method: 'POST',
+        headers: { 'x-api-key': apiKey, 'X-Correlation-ID': clientCorrelationId || requestId },
+        body: recFd as any,
+        retry: 2,
+        retryDelayMs: 400
+      });
+      if (!recRes.ok) {
+        const text = await recRes.text().catch(() => '');
+        return json({ error: 'Recommendation service error', debug: { requestId, status: recRes.status, body: text } }, { status: 502 });
+      }
+      recData = await recRes.json();
     }
-    const recData: any = await recRes.json();
 
     // Call try-on endpoint (may be async when using nano provider)
     const tryFd = new FormData();
@@ -565,6 +579,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         tailor_feedback: recData.tailor_feedback || recData.tailorFeedback,
         display_unit: matchedDisplayUnit,
         match_details: matchDetails,
+        isOneSizeFitsAll: categoryIdNum === 99,
         debug: { measurement_vis_url: recData?.debug?.measurement_vis_url || '', requestId, productId, conversionStatus, correlationId: clientCorrelationId }
       };
     }

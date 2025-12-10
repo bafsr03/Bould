@@ -74,24 +74,27 @@ export default function ControlsPanel({
 
   // DeepFashion2 categories 1..13 (simplified labels)
   const categoryOptions = [
-    { label: "Short sleeve top (1)", value: "1" },
-    { label: "Long sleeve top (2)", value: "2" },
-    { label: "Short sleeve outwear (3)", value: "3" },
-    { label: "Long sleeve outwear (4)", value: "4" },
-    { label: "Vest (5)", value: "5" },
-    { label: "Sling (6)", value: "6" },
-    { label: "Shorts (7)", value: "7" },
-    { label: "Trousers (8)", value: "8" },
-    { label: "Skirt (9)", value: "9" },
-    { label: "Short sleeve dress (10)", value: "10" },
-    { label: "Long sleeve dress (11)", value: "11" },
-    { label: "Vest dress (12)", value: "12" },
-    { label: "Sling dress (13)", value: "13" },
+    { label: "Short sleeve top", value: "1" },
+    { label: "Long sleeve top", value: "2" },
+    { label: "Short sleeve outwear", value: "3" },
+    { label: "Long sleeve outwear", value: "4" },
+    { label: "Vest", value: "5" },
+    { label: "Sling", value: "6" },
+    { label: "Shorts", value: "7" },
+    { label: "Trousers", value: "8" },
+    { label: "Skirt", value: "9" },
+    { label: "Short sleeve dress", value: "10" },
+    { label: "Long sleeve dress", value: "11" },
+    { label: "Vest dress", value: "12" },
+    { label: "Sling dress", value: "13" },
+    { label: "One Size Fits All", value: "99" },
   ];
 
   const sizeOptions = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL", "ONEFIT"];
 
   const handleCategoryChange = useCallback((value: string) => setSelectedCategory(value), []);
+
+  const isOneSize = selectedCategory === "99";
 
   const handleConvert = useCallback(() => {
     if (!selected) return;
@@ -194,11 +197,30 @@ export default function ControlsPanel({
       <Divider />
 
       <Text as="h3" variant="headingSm">True Size</Text>
-      <Select label="True Size" options={sizeOptions.map(s => ({ label: s, value: s }))} value={trueSize} onChange={setTrueSize as any} />
+      <Select 
+        label="True Size" 
+        options={sizeOptions.map(s => ({ label: s, value: s }))} 
+        value={trueSize} 
+        onChange={setTrueSize as any} 
+        disabled={isOneSize}
+      />
 
       <InlineStack gap="200">
-        <Select label="Unit" options={[{ label: 'cm', value: 'cm' }, { label: 'inch', value: 'inch' }]} value={unit} onChange={setUnit as any} />
-        <TextField label="True Waist (optional)" value={trueWaist} onChange={setTrueWaist} autoComplete="off" type="number" />
+        <Select 
+          label="Unit" 
+          options={[{ label: 'cm', value: 'cm' }, { label: 'inch', value: 'inch' }]} 
+          value={unit} 
+          onChange={setUnit as any} 
+          disabled={isOneSize}
+        />
+        <TextField 
+          label="True Waist (optional)" 
+          value={trueWaist} 
+          onChange={setTrueWaist} 
+          autoComplete="off" 
+          type="number" 
+          disabled={isOneSize}
+        />
       </InlineStack>
       <Divider />
 

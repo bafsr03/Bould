@@ -493,19 +493,34 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
     }
 
-    const recRes = await fetch(`${base.replace(/\/$/, "")}/v1/recommend`, {
-      method: "POST",
-      headers: { "x-api-key": apiKey },
-      body: recFd as any,
-    });
-    if (!recRes.ok) {
-      const text = await recRes.text().catch(() => "");
-      return json(
-        { error: "Recommendation service error", debug: { requestId, status: recRes.status, body: text } },
-        { status: 502 }
-      );
+    let recData: any;
+    const categoryIdNum = Number(conversionRecord.categoryId);
+
+    if (categoryIdNum === 99) {
+      recData = {
+        recommended_size: null,
+        confidence: 1.0,
+        tailor_feedback: "This garment is designed to fit everyone.",
+        tailor_feedback_sequence: ["This garment is designed to fit everyone."],
+        final_feedback: "This garment is designed to fit everyone.",
+        display_unit: bodyUnit,
+        match_details: null
+      };
+    } else {
+      const recRes = await fetch(`${base.replace(/\/$/, "")}/v1/recommend`, {
+        method: "POST",
+        headers: { "x-api-key": apiKey },
+        body: recFd as any,
+      });
+      if (!recRes.ok) {
+        const text = await recRes.text().catch(() => "");
+        return json(
+          { error: "Recommendation service error", debug: { requestId, status: recRes.status, body: text } },
+          { status: 502 }
+        );
+      }
+      recData = await recRes.json();
     }
-    const recData = await recRes.json();
 
     // Call try-on endpoint
     const tryFd = new FormData();
@@ -619,6 +634,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       confidence: recData.confidence,
       tailor_feedback_sequence: feedbackSequence,
       final_feedback: recData.final_feedback || recData.finalFeedback || tailorFeedback,
+      isOneSizeFitsAll: categoryIdNum === 99,
       debug: {
         measurement_vis_url: recData?.debug?.measurement_vis_url || "",
         requestId,

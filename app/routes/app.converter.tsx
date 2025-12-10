@@ -242,6 +242,41 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
     }
 
+    // Special handling for "One Size Fits All" (Category 99)
+    if (categoryId === "99") {
+      console.log(`[CONVERTER] One Size Fits All category selected. Skipping processing.`);
+      const after = await (prisma as any).conversion.findFirst({ where: { shopifyProductId: productId } });
+      
+      if (after) {
+        await (prisma as any).conversion.update({
+          where: { id: after.id },
+          data: {
+            status: "completed",
+            processed: true,
+            previewImageUrl: null,
+            sizeScaleUrl: null,
+            categoryId: 99,
+          },
+        });
+      }
+
+      return json({
+        success: true,
+        productId,
+        conversion: {
+          status: "completed",
+          processed: true,
+          previewImageUrl: null,
+          sizeScaleUrl: null,
+          categoryId: 99,
+          trueSize,
+          unit,
+          trueWaist,
+          tone,
+        }
+      });
+    }
+
     try {
       console.log(`[CONVERTER] Preparing image for processing...`);
 
