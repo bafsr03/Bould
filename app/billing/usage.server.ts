@@ -9,19 +9,23 @@ export async function getApparelPreviewUsage(
   shopDomain: string | null | undefined,
   options?: { windowMinutes?: number | null }
 ): Promise<ApparelPreviewUsage> {
-  const baseFilter: Record<string, unknown> = {
-    conversion: { processed: true, status: "completed" },
-  };
+  // Track usage by shopDomain directly (not through conversion relation)
+  // This ensures usage persists even when apparels/conversions are deleted
+  const baseFilter: Record<string, unknown> = {};
+
+  // Only count events that have a shopDomain (brand-level tracking)
+  if (shopDomain) {
+    baseFilter["shopDomain"] = shopDomain;
+  } else {
+    // If no shopDomain provided, return 0 usage (can't track without shop)
+    return { total: 0 };
+  }
 
   const windowMinutes = options?.windowMinutes ?? null;
   if (windowMinutes && windowMinutes > 0) {
     baseFilter["createdAt"] = {
       gte: new Date(Date.now() - windowMinutes * 60 * 1000),
     };
-  }
-
-  if (shopDomain) {
-    baseFilter["OR"] = [{ shopDomain }, { shopDomain: null }];
   }
 
   const client: any = prisma as any;
