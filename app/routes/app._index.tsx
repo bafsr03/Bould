@@ -294,7 +294,7 @@ export default function Index() {
                 onChange={handleSelectChange}
               />
             </InlineStack>
-            <Button icon={CalendarIcon}>Past 7 days</Button>
+            {/* <Button icon={CalendarIcon}>Past 7 days</Button> */}
           </InlineStack>
         </Box>
 
@@ -359,18 +359,20 @@ export default function Index() {
                         icon={PlayCircleIcon}
                         variant="plain"
                         accessibilityLabel="Watch video"
+                        url="https://youtu.be/SjIkJSzvYLU"
+                        target="_blank"
                       >
                         Watch video
                       </Button>
-                      <Link url="#" removeUnderline>
+                      {/* <Link url="#" removeUnderline>
                         Read instruction
-                      </Link>
+                      </Link> */}
                     </InlineStack>
                   </BlockStack>
                 </InlineStack>
               </Card>
             </Layout.Section>
-            <Layout.Section>
+            {/* <Layout.Section>
               <Card>
                 <InlineStack gap="300" blockAlign="center" wrap={false}>
                   <Box
@@ -407,9 +409,9 @@ export default function Index() {
                   </BlockStack>
                 </InlineStack>
               </Card>
-            </Layout.Section>
+            </Layout.Section> */}
           </Layout>
-          <InlineStack align="center">
+          {/* <InlineStack align="center">
             <ButtonGroup>
               <Button icon={ChevronLeftIcon} accessibilityLabel="Previous tutorial" />
               <Box paddingInlineStart="150" paddingInlineEnd="150">
@@ -417,7 +419,7 @@ export default function Index() {
               </Box>
               <Button icon={ChevronRightIcon} accessibilityLabel="Next tutorial" />
             </ButtonGroup>
-          </InlineStack>
+          </InlineStack> */}
         </BlockStack>
 
         {/* Section 8 */}
@@ -425,11 +427,11 @@ export default function Index() {
           <Text variant="headingMd" as="h2">
             Need any help?
           </Text>
-          <InlineGrid columns={{ xs: 1, sm: 2, md: 3 }} gap="400">
+          <InlineGrid columns={{ xs: 1, sm: 2, md: 2 }} gap="400">
             <Card>
               <BlockStack gap="150" inlineAlign="center">
                 <Icon source={ChatIcon} tone="primary" />
-                <Link url="#" removeUnderline>
+                <Link url="mailto:support@bouldhq.com?subject=I need support with the Bould app" removeUnderline target="_top">
                   <Text variant="headingSm" as="h4">
                     Get email support
                   </Text>
@@ -442,7 +444,7 @@ export default function Index() {
             <Card>
               <BlockStack gap="150" inlineAlign="center">
                 <Icon source={EnvelopeSoftPackIcon} tone="primary" />
-                <Link url="#" removeUnderline>
+                <Link url="mailto:support@bouldhq.com?subject=I have questions about the Bould app" removeUnderline target="_top">
                   <Text variant="headingSm" as="h4">
                     Contact us
                   </Text>
@@ -452,7 +454,7 @@ export default function Index() {
                 </Text>
               </BlockStack>
             </Card>
-            <Card>
+            {/* <Card>
               <BlockStack gap="150" inlineAlign="center">
                 <Icon source={EnvelopeSoftPackIcon} tone="primary" />
                 <Link url="#" removeUnderline>
@@ -464,7 +466,7 @@ export default function Index() {
                   Find a solution for your problem with documents (coming soon)
                 </Text>
               </BlockStack>
-            </Card>
+            </Card> */}
           </InlineGrid>
         </BlockStack>
 
@@ -473,7 +475,7 @@ export default function Index() {
           <div style={{ textAlign: "center" }}>
             <Text as="h4" tone="subdued">
               Need help?{" "}
-              <Link url="mailto:jake@bouldhq.com" removeUnderline>
+              <Link url="mailto:jake@bouldhq.com?subject=I have questions about the Bould app" removeUnderline target="_top">
                 Chat with us.
               </Link>
             </Text>

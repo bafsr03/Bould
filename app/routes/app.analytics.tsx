@@ -487,7 +487,7 @@ export default function AnalyticsPage() {
             <Box paddingBlockStart="300">
               <div style={{ textAlign: "center" }}>
                 <Text as="h4" tone="subdued">
-                  Need help? <a href="mailto:jake@bouldhq.com">Chat with us.</a>
+                  Need help? <a href="mailto:jake@bouldhq.com?subject=I have questions about the Bould app" target="_top">Chat with us.</a>
                 </Text>
                 <Box paddingBlockStart="100">
                   <Text as="h4" tone="subdued">© 2025 Bould</Text>

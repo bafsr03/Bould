@@ -138,8 +138,7 @@ export default function PricingPage() {
                   Pick the right plan
                 </Text>
                 <Text as="h4">
-                  Questions?{" "}
-                  <Link url="mailto:support@bould.ai">Chat with us.</Link>
+                  Get what fits best for you.
                 </Text>
 
 
@@ -258,7 +257,8 @@ export default function PricingPage() {
                     Enterprise
                   </Text>
                   <Button
-                    onClick={() => {}}
+                    url="mailto:jake@bouldhq.com?subject=Inquiry about Enterprise plan"
+                    target="_top"
                     accessibilityLabel="Contact Sales"
                     variant="primary"
                   >
@@ -276,7 +276,7 @@ export default function PricingPage() {
               <div style={{ textAlign: "center" }}>
                 <Text as="h4" tone="subdued">
                   Need help?{" "}
-                  <Link url="mailto:jake@bouldhq.com" removeUnderline>
+                  <Link url="mailto:jake@bouldhq.com?subject=I have questions about the Bould app" removeUnderline target="_top">
                     Chat with us.
                   </Link>
                 </Text>

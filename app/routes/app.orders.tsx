@@ -162,7 +162,7 @@ export default function BlanksPage() {
         <div style={{ textAlign: "center" }}>
           <Text as="h4" tone="subdued">
             Need help?{" "}
-            <Link url="mailto:jake@bouldhq.com" removeUnderline>
+            <Link url="mailto:jake@bouldhq.com?subject=I have questions about the Bould app" removeUnderline target="_top">
               Chat with us.
             </Link>
           </Text>
