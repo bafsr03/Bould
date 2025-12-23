@@ -2,7 +2,7 @@
 
 client_id = "b6d437a7d969cd77e40e9cb95583c5fd"
 name = "Bould"
-application_url = "https://reporters-continuously-hispanic-probe.trycloudflare.com"
+application_url = "https://bould.fly.dev"
 embedded = true
 handle = "bould"
 
@@ -20,19 +20,23 @@ api_version = "2025-04"
   topics = [ "app/uninstalled" ]
   uri = "/webhooks/app/uninstalled"
 
+  [[webhooks.subscriptions]]
+  compliance_topics = [ "customers/redact", "customers/data_request", "shop/redact" ]
+  uri = "/webhooks/privacy"
+
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://reporters-continuously-hispanic-probe.trycloudflare.com/auth/callback",
-  "https://reporters-continuously-hispanic-probe.trycloudflare.com/auth/shopify/callback",
-  "https://reporters-continuously-hispanic-probe.trycloudflare.com/api/auth/callback"
+  "https://bould.fly.dev/auth/callback",
+  "https://bould.fly.dev/auth/shopify/callback",
+  "https://bould.fly.dev/api/auth/callback"
 ]
 
 [app_proxy]
-url = "https://reporters-continuously-hispanic-probe.trycloudflare.com/app/proxy"
+url = "https://bould.fly.dev/app/proxy"
 subpath = "bould"
 prefix = "apps"
 

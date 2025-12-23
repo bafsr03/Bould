@@ -32,7 +32,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (plan.id === STARTER_PLAN_ID) {
     const { appSubscriptions } = await billing.check({
       plans: PAID_BILLING_PLAN_KEYS as any,
-      isTest: true,
+      isTest: false,
     });
 
     const activeSubscription =
@@ -43,7 +43,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       await billing.cancel({
         subscriptionId: activeSubscription.id,
         prorate: true,
-        isTest: true,
+        isTest: false,
       });
     }
 
@@ -54,7 +54,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   await billing.request({
     plan: plan.billingKey as never,
-    isTest: true,
+    isTest: false,
     returnUrl,
   });
 

@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "build": "remix vite:build",
-    "dev": "shopify app dev",
+    "dev": "shopify app dev --tunnel-url https://dev.bouldhq.com",
     "config:link": "shopify app config link",
     "generate": "shopify app generate",
     "deploy": "shopify app deploy",
@@ -23,6 +23,7 @@
     "node": "^18.20 || ^20.10 || >=21.0.0"
   },
   "dependencies": {
+    "@flydotio/litestream": "^1.0.1",
     "@prisma/client": "^6.2.1",
     "@remix-run/dev": "^2.16.1",
     "@remix-run/fs-routes": "^2.16.1",
@@ -41,6 +42,7 @@
     "vite-tsconfig-paths": "^5.0.1"
   },
   "devDependencies": {
+    "@flydotio/dockerfile": "^0.7.10",
     "@remix-run/eslint-config": "^2.16.1",
     "@remix-run/route-config": "^2.16.1",
     "@shopify/api-codegen-preset": "^1.1.1",
@@ -74,5 +76,8 @@
     "@graphql-codegen/typescript-operations": "4.5.0",
     "minimatch": "9.0.5"
   },
-  "author": "prueba"
+  "author": "prueba",
+  "dockerfile": {
+    "litestream": true
+  }
 }
