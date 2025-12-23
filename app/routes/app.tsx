@@ -56,6 +56,7 @@ export default function App() {
         <Link to="/app/orders">Orders</Link>*/}
         {showAnalytics && <Link to="/app/analytics">Admin & Analytics</Link>}
         <Link to="/app/pricing">Pricing</Link>
+        <Link to="/app/installation">Installation</Link>
       </NavMenu>
       {isLoading ? (
         <LoadingPage pageTitleInBar={loadingPageTitle} />

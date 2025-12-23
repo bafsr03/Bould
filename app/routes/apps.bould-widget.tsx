@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { unauthenticated } from "../shopify.server";
+import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { getPlanForShop } from "../billing/plan.server";
 import {
@@ -24,13 +24,17 @@ function logError(error: any, context: string, details?: any) {
 
 const UPGRADE_WIDGET_MESSAGE = "Upgrade to continue using Bould.";
 
-// Enforce required env in production
-const RECOMMENDER_BASE = (process.env.RECOMMENDER_BASE_URL || process.env.RECOMMENDER_URL || '').trim();
-const RECOMMENDER_API_KEY = (process.env.RECOMMENDER_API_KEY || process.env.API_KEY || '').trim();
-if (process.env.NODE_ENV === 'production') {
-  if (!RECOMMENDER_BASE || !RECOMMENDER_API_KEY) {
-    throw new Error('RECOMMENDER_BASE_URL and RECOMMENDER_API_KEY must be set in production');
+// Helper to validate config at runtime
+function validateConfig() {
+  const RECOMMENDER_BASE = (process.env.RECOMMENDER_BASE_URL || process.env.RECOMMENDER_URL || '').trim();
+  const RECOMMENDER_API_KEY = (process.env.RECOMMENDER_API_KEY || process.env.API_KEY || '').trim();
+  
+  if (process.env.NODE_ENV === 'production') {
+    if (!RECOMMENDER_BASE || !RECOMMENDER_API_KEY) {
+      throw new Error('RECOMMENDER_BASE_URL and RECOMMENDER_API_KEY must be set in production');
+    }
   }
+  return { RECOMMENDER_BASE, RECOMMENDER_API_KEY };
 }
 
 // Simple in-memory rate limiter
@@ -102,7 +106,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substring(7);
   try {
-    await unauthenticated.public.appProxy(request);
+    await authenticate.public.appProxy(request);
 
     const url = new URL(request.url);
     const intent = url.searchParams.get('intent');
@@ -184,8 +188,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       if (!taskId) {
         return json({ error: 'task_id is required', debug: { requestId } }, { status: 400 });
       }
-      const base = (process.env.RECOMMENDER_BASE_URL || process.env.RECOMMENDER_URL || '').replace(/\/$/, '');
-      const apiKey = process.env.RECOMMENDER_API_KEY || process.env.API_KEY || '';
+      const { RECOMMENDER_BASE: base, RECOMMENDER_API_KEY: apiKey } = validateConfig();
       if (!base || !apiKey) {
         return json({ error: 'Recommender not configured', debug: { requestId } }, { status: 500 });
       }
@@ -214,7 +217,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const requestId = Math.random().toString(36).substring(7);
 
   try {
-    await unauthenticated.public.appProxy(request);
+    await authenticate.public.appProxy(request);
 
     // Correlation ID from client (if provided)
     const clientCorrelationId = request.headers.get('X-Correlation-ID') || undefined;
@@ -395,6 +398,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     // Real orchestration via recommender
+    const { RECOMMENDER_BASE, RECOMMENDER_API_KEY } = validateConfig();
     const base = (RECOMMENDER_BASE || '').replace(/\/$/, '');
     const apiKey = RECOMMENDER_API_KEY;
     if (!base || !apiKey) {

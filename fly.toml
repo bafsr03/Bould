@@ -13,6 +13,8 @@ primary_region = 'iad'
   SCOPES = 'write_products'
   SHOPIFY_API_KEY = 'b6d437a7d969cd77e40e9cb95583c5fd'
   SHOPIFY_APP_URL = 'https://bould.fly.dev'
+  GARMENTS_API_URL = 'https://bould-garments.fly.dev'
+  RECOMMENDER_BASE_URL = 'https://bould-recommender.fly.dev'
 
 [processes]
   app = 'node ./dbsetup.js npm run docker-start'

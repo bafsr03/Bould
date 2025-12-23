@@ -244,7 +244,7 @@ export default function PricingPage() {
             </Box>
 
             {/* Enterprise Box */}
-            <Box
+            {/* <Box
               background="bg-surface"
               padding="300"
               borderRadius="300"
@@ -269,7 +269,7 @@ export default function PricingPage() {
                   Let's find a plan that works for your business
                 </Text>
               </BlockStack>
-            </Box>
+            </Box> */}
 
             {/* Footer */}
             <Box paddingBlockStart="300">
